@@ -6,7 +6,6 @@
 |---|---|---|
 | `dsh-prompt-zh/` | 中文提示词 | 把模型看到的系统提示词、运行时上下文、工具说明翻成中文 |
 | `dsh-preset-interlocutor/` | 思辨模式（诤友） | 一个 agent preset：强对话、弱执行 |
-| `mac-extra/prompt-zh/zh.json` | Mac 补充词表 | 见「macOS 注意」 |
 
 两个包都是 DSH 的 **profile bundle**：装进某个 profile 并登记进它的
 `dsh.profile.bundles` 才生效。两个包都**没有 `prepare`/install 脚本**（只有 `test`
@@ -83,21 +82,18 @@ git clone https://github.com/<你的用户名>/dsh-plugins.git ~/dsh-plugins
 
 ## macOS 注意
 
-DSH 按平台挂载 shell 工具：Windows 是 `pwsh`，**macOS / Linux 是 `bash`**。
-`dsh-prompt-zh` 随包词表只覆盖了 `pwsh`，所以 Mac 上 `tool:bash` 段落和 `bash`
-工具描述会退回英文。把补充词表放到位：
+**不需要做任何事。** DSH 按平台挂载 shell 工具：Windows 是 `pwsh`，**macOS / Linux 是
+`bash`**。`dsh-prompt-zh` 的随包词表同时覆盖了这两套——`tool:pwsh` / `pwsh` 与
+`tool:bash` / `bash`——所以 Mac 上开箱就是中文，不用额外放词表文件。
 
-```sh
-mkdir -p ~/.dsh/prompt-zh && cp ~/dsh-plugins/mac-extra/prompt-zh/zh.json ~/.dsh/prompt-zh/zh.json
-```
+两条平台相关的事实，方便排查：
 
-（用 `github:` 安装的人没有本地仓库，从 GitHub 页面把
-`mac-extra/prompt-zh/zh.json` 下载下来再拷到那个位置即可。）
-
-这是插件设计好的用户覆盖层（`$DSH_HOME/prompt-zh/zh.json`），优先级高于随包词表，
-只新增 `bash` 条目、不覆盖任何现有译文。**词表按 mtime 失效，改它不用重启宿主。**
-
-装了 DSH 的 agent 也能代劳：「把 mac-extra/prompt-zh/zh.json 拷到 ~/.dsh/prompt-zh/zh.json」。
+- `dsh-base` 在非 win32 上挂 `bash-sandbox`（win32 上挂 `pwsh-sandbox`），
+  两套都是受沙箱约束的执行器，所以 macOS 上 `bash` 的描述**包含**沙箱提权那一段，
+  与词表里的 `en` 基线一致。
+- 若某个部署改用不受约束的执行器（`dsh-bash-local`），`bash` 描述会少掉提权段，
+  这条会被报成 `drift` 而**保留英文**——它不会静默：插件默认会向宿主日志警告一次，
+  覆盖率报告里也点得到。这是词表带 `en` 基线的固有取舍（`pwsh` 条目同理）。
 
 ---
 
@@ -117,6 +113,18 @@ mkdir -p ~/.dsh/prompt-zh && cp ~/dsh-plugins/mac-extra/prompt-zh/zh.json ~/.dsh
 - **词表维护**：`scripts/translations/*.json` 是人写的一层，`dict/zh.json` 是生成物。
   DSH 升级后跑覆盖率报告，把新条目补进 translations，再
   `node scripts/build-dict.mjs --report <报告>` 重新生成，`node scripts/selftest.mjs` 校验。
+  `en` 基线有两条来源：不带 `--report` 时会从现有 `dict/zh.json` **继承**（所以重新生成
+  不会丢漂移检测），或者由 `--report` 写入。对报告覆盖不到的条目——例如只在
+  macOS 上存在的 `bash`，Windows 上抓的报告里没有它——可以直接在 translations 源里
+  写成 `{ "en": "...", "zh": "..." }`，`build-dict` 会原样透传。
+  注意 `en` 只对「无条件替换」的条目生效；带 `exact`/`match`/`capture`/`variants` 的条目
+  不要写它。
+- **`en` 与原文不符的后果是"保留英文"而不是"乱译"**：无条件条目的 `en` 一旦与宿主实际
+  发出的原文不同，`resolveEntry` 判为 `drift`，译文**不会被应用**。所以给条件性文本
+  （如 `bash`/`pwsh` 的描述）写基线时，要基线与该平台默认装配产出的原文一致。
+- **改完记得跑 `node scripts/selftest.mjs`。** 它会对着 `en` 基线逐条校验，
+  并模拟上游改动；`build-dict` 在不带 `--report` 时**不会**报告"某工具缺 description"
+  这类遗漏——`selftest` 会。
 - **版本要求**：`dsh-prompt-zh` 声明 `dsh >= 0.1.7-rc.1`；「思辨模式」用的声明行机制
   在 `0.1.7-rc.1` 已就位（该版本含 `dsh-agent-preset` / `dsh-agent-preset-registry` /
   `dsh-client-ui-agent-preset`）。0.1.5 那条线用的是目录式 preset，装不上。

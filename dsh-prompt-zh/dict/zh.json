@@ -20,6 +20,10 @@
       "en": "Non-zero exits are reported as `[exit code: N]` markers; investigate failures before moving on. On Windows a killed process settles as `[exit code: 1]` without a signal marker; treat a bare exit 1 after an interruption as a termination, not a command failure.",
       "zh": "非零退出会以 `[exit code: N]` 标记报告；继续之前先查清失败原因。在 Windows 上，被强杀的进程以 `[exit code: 1]` 结算，且不带信号标记；中断之后出现的裸 exit 1 应视为进程被终止，而不是命令失败。"
     },
+    "tool:bash": {
+      "en": "Check the [exit code: N] marker on every bash result; investigate failures before moving on.",
+      "zh": "每条 bash 结果都要看 `[exit code: N]` 标记；先查清失败原因再继续。"
+    },
     "tool:read": {
       "en": "Use the read tool — not shell commands like cat — to inspect text files. Results include line numbers. Use offset and limit to continue reading large files.",
       "zh": "查看文本文件请用 read 工具，而不是 cat 之类的 shell 命令。结果带行号。读大文件时用 offset 与 limit 续读。"
@@ -599,6 +603,42 @@
       "description": {
         "en": "Execute a PowerShell command (`pwsh -Command`) and return its stdout/stderr. Each call runs in a fresh pwsh process: no state (cwd, variables, functions) persists between calls — pass `workdir` instead of using `cd`. Paths use native Windows form (`C:\\...`); read environment variables with `$env:NAME`. Non-zero exits are reported as `[exit code: N]`. Current harness environment facts are exposed through managed `$env:DSH_*` variables; inspect them when needed. Commands may run under a file sandbox; a blocked file operation is reported as `[sandbox: file access denied under <mode> mode]` — a policy denial, not a bug in the command; do not retry another way. Long output is truncated to its tail; the full output is saved to a file whose path is reported when available. On Windows a force-killed command settles as `[exit code: 1]` without a signal marker — treat it as an interruption, not a command failure. Set `run_in_background: true` for long-running commands: the call returns a job id immediately; read its output with `job_output` and stop it with `job_kill`. A foreground command that reaches its timeout is not killed: it moves to the background the same way, returning its job id and the output so far. Under the Windows sandbox, read-only pwsh runs in PowerShell ConstrainedLanguage mode, while workspace-write stays in FullLanguage unless host policy says otherwise. In read-only, prefer cmdlets and core types (`[string]`, `[datetime]`, `[regex]`, `[guid]`); .NET static calls (`[System.IO.*]::`, `[math]::`), `Add-Type`, COM objects, and reflection fail with \"only core types\" errors. `-f` formatting, property access, and core cmdlets work. In both confined modes, programs cannot open named pipes, so a command that captures another program's output through piped stdio (Node.js `child_process.spawn`/`exec` with the default `stdio: 'pipe'`) fails with EPERM, while `stdio: 'inherit'` and `stdio: 'ignore'` spawns work and PowerShell's own pipelines are unaffected. That EPERM is the documented boundary: do not retry the command another way — escalate the exact command once or restructure it to avoid capturing output. Attempting a command the sandbox may deny is safe and expected: run it and read the marker rather than assuming the denial. When a command is denied and a wider mode would let it succeed, escalate immediately in the same turn — the one sanctioned exception to a denial: retry the exact same command once with `sandbox_permissions` (the narrowest wider mode that suffices) plus a one-sentence `justification`. Do not detour through chat to ask permission first — the approval prompt raised by that retry is how the user consents. If the session states approval prompts are disabled, there is no exception: a denial is final — do not set `sandbox_permissions`. Never escalate speculatively: ground the request in a real denial — normally the one this command just hit; escalating up front is fine only when this session already denied the same access. A rejected escalation is final for that command — stop and explain, never work around it — but it does not forbid attempting or escalating other commands later.",
         "zh": "执行一条 PowerShell 命令（`pwsh -Command`）并返回它的 stdout/stderr。每次调用都在一个全新的 pwsh 进程里运行：调用之间不保留任何状态（cwd、变量、函数）——要换目录请传 `workdir`，不要用 `cd`。路径用原生 Windows 形式（`C:\\...`）；读环境变量用 `$env:NAME`。非零退出会以 `[exit code: N]` 报告。当前 harness 环境的事实通过受管的 `$env:DSH_*` 变量暴露；需要时读它们。命令可能在文件沙箱下运行；被拦下的文件操作会以 `[sandbox: file access denied under <mode> mode]` 报告——那是策略拒绝，不是命令本身的 bug；不要换一种方式重试。过长的输出会被截断到尾部；完整输出会保存到一个文件，可用时会给出该文件的路径。在 Windows 上，被强杀的命令以 `[exit code: 1]` 结算，且不带信号标记——应视为中断，而不是命令失败。对长时间运行的命令设 `run_in_background: true`：调用会立即返回一个 job id；用 `job_output` 读它的输出，用 `job_kill` 停掉它。前台命令到达超时不会被杀死：它同样转为后台，返回它的 job id 以及此前已有的输出。在 Windows 沙箱下，只读模式的 pwsh 运行在 PowerShell ConstrainedLanguage 模式，而 workspace-write 保持在 FullLanguage，除非宿主策略另有规定。只读模式下优先用 cmdlet 与核心类型（`[string]`、`[datetime]`、`[regex]`、`[guid]`）；.NET 静态调用（`[System.IO.*]::`、`[math]::`）、`Add-Type`、COM 对象和反射都会以 \"only core types\" 错误失败。`-f` 格式化、属性访问和核心 cmdlet 可以正常工作。在两种受限模式下，程序都无法打开命名管道，因此凡是经由管道 stdio 捕获另一个程序输出的命令（Node.js 的 `child_process.spawn`/`exec`，使用默认 `stdio: 'pipe'`）都会以 EPERM 失败，而 `stdio: 'inherit'` 与 `stdio: 'ignore'` 的 spawn 可以工作，PowerShell 自身的管道也不受影响。那个 EPERM 就是文档化的边界：不要换一种方式重试该命令——把这条完全相同的命令提权重试一次，或者改造它以避免捕获输出。尝试一条沙箱可能拒绝的命令是安全且符合预期的：直接跑它并读标记，而不是先假定它会被拒绝。当一条命令被拒绝、而更宽的模式能让它成功时，在同一轮里立刻提权——这是被拒绝之后唯一被许可的例外：用 `sandbox_permissions`（够用的最窄的更宽模式）加上一句 `justification`，把完全相同的命令重试一次。不要绕道聊天先问许可——那次重试弹出的审批提示就是用户表示同意的方式。如果会话声明审批提示已禁用，就没有例外：拒绝是最终结果——不要设置 `sandbox_permissions`。永远不要投机性提权：请求必须以一次真实的拒绝为依据——通常就是这条命令刚刚撞上的那次；只有本次会话已经拒绝过同样的访问时，才可以直接预先提权。被驳回的提权对该命令是最终的——停下来解释，绝不要绕开它——但这并不禁止之后再尝试或提权别的命令。"
+      }
+    },
+    "bash": {
+      "parameters": {
+        "properties.command.description": {
+          "en": "The bash command to execute.",
+          "zh": "要执行的 bash 命令。"
+        },
+        "properties.description.description": {
+          "en": "Clear, concise description of what this command does in active voice, 5-10 words (shown in the UI). Examples: \"ls\" → \"List files in current directory\"; \"git status\" → \"Show working tree status\"; \"npm install\" → \"Install package dependencies\".",
+          "zh": "用主动语态清楚简洁地说明这条命令做什么，5-10 个词（会展示在 UI 里）。示例：\"ls\" → \"List files in current directory\"；\"git status\" → \"Show working tree status\"；\"npm install\" → \"Install package dependencies\"。"
+        },
+        "properties.timeoutMs.description": {
+          "en": "Timeout in milliseconds. The executor applies its configured default and cap, and kills the command on expiry.",
+          "zh": "超时毫秒数。执行器会套用它配置的默认值与上限，并在到期时结束该命令。"
+        },
+        "properties.workdir.description": {
+          "en": "Working directory for this command. Defaults to the session workspace; a relative path is resolved against it.",
+          "zh": "这条命令的工作目录。默认为会话工作区；相对路径按它解析。"
+        },
+        "properties.run_in_background.description": {
+          "en": "Run in the background and return a job id immediately (collect with job_output, stop with job_kill). No timeout applies.",
+          "zh": "在后台运行并立即返回一个 job id（用 job_output 收集，用 job_kill 停止）。不限超时。"
+        },
+        "properties.sandbox_permissions.description": {
+          "en": "The wider sandbox mode this command needs. Only valid as a one-shot retry of a command the sandbox just denied; requires justification and user approval.",
+          "zh": "这条命令需要的更宽沙箱模式。仅在沙箱刚刚拒绝了某条命令、要一次性重试它时有效；需要理由和用户批准。"
+        },
+        "properties.justification.description": {
+          "en": "Required with sandbox_permissions: one sentence for the user explaining why this exact command needs the wider access.",
+          "zh": "与 sandbox_permissions 同时必填：用一句话向用户说明这条命令为什么需要更宽的权限。"
+        }
+      },
+      "description": {
+        "en": "Execute a bash command (`bash -c`) and return its stdout/stderr. Each call runs in a fresh shell: no state (cwd, variables, functions) persists between calls — pass `workdir` instead of using `cd`. Non-zero exits are reported as `[exit code: N]`. Current harness environment facts are exposed through managed `$DSH_*` variables; inspect them when needed. Commands may run under a file sandbox; a blocked file operation is reported as `[sandbox: file access denied under <mode> mode]` — a policy denial, not a bug in the command; do not retry another way. Long output is truncated to its tail; the full output is saved to a file whose path is reported when available. Set `run_in_background: true` for long-running commands: the call returns a job id immediately; read its output with `job_output` and stop it with `job_kill`. Attempting a command the sandbox may deny is safe and expected: run it and read the marker rather than assuming the denial. When a command is denied and a wider mode would let it succeed, escalate immediately in the same turn — the one sanctioned exception to a denial: retry the exact same command once with `sandbox_permissions` (the narrowest wider mode that suffices) plus a one-sentence `justification`. Do not detour through chat to ask permission first — the approval prompt raised by that retry is how the user consents. If the session states approval prompts are disabled, there is no exception: a denial is final — do not set `sandbox_permissions`. Never escalate speculatively: ground the request in a real denial — normally the one this command just hit; escalating up front is fine only when this session already denied the same access. A rejected escalation is final for that command — stop and explain, never work around it — but it does not forbid attempting or escalating other commands later.",
+        "zh": "执行一条 bash 命令（`bash -c`）并返回它的 stdout/stderr。每次调用都在一个全新的 shell 里运行：调用之间不保留任何状态（cwd、变量、函数）——要换目录请传 `workdir`，不要用 `cd`。非零退出会以 `[exit code: N]` 报告。当前 harness 环境的事实通过受管的 `$DSH_*` 变量暴露；需要时读它们。命令可能在文件沙箱下运行；被拦下的文件操作会以 `[sandbox: file access denied under <mode> mode]` 报告——那是策略拒绝，不是命令本身的 bug；不要换一种方式重试。过长的输出会被截断到尾部；完整输出会保存到一个文件，可用时会给出该文件的路径。对长时间运行的命令设 `run_in_background: true`：调用会立即返回一个 job id；用 `job_output` 读它的输出，用 `job_kill` 停掉它。尝试一条沙箱可能拒绝的命令是安全且符合预期的：直接跑它并读标记，而不是先假定它会被拒绝。当一条命令被拒绝、而更宽的模式能让它成功时，在同一轮里立刻提权——这是被拒绝之后唯一被许可的例外：用 `sandbox_permissions`（够用的最窄的更宽模式）加上一句 `justification`，把完全相同的命令重试一次。不要绕道聊天先问许可——那次重试弹出的审批提示就是用户表示同意的方式。如果会话声明审批提示已禁用，就没有例外：拒绝是最终结果——不要设置 `sandbox_permissions`。永远不要投机性提权：请求必须以一次真实的拒绝为依据——通常就是这条命令刚刚撞上的那次；只有本次会话已经拒绝过同样的访问时，才可以直接预先提权。被驳回的提权对该命令是最终的——停下来解释，绝不要绕开它——但这并不禁止之后再尝试或提权别的命令。"
       }
     },
     "write": {

@@ -5,6 +5,10 @@
     "deployment:persona-suffix": "你的工作目录是 {{cwd}}。",
     "context:file-reference": "以 @ 开头的 token 是用户显式引用的路径。相对路径按工作区根目录解析；绝对路径指向宿主上的文件或目录。以斜杠结尾表示目录：需要知道里面有什么时就列出它。其余的都是文件：需要其中内容时用 read 工具，并且在读取之前不要声称已经查看过它。@\"...\" 用来引用含空格的路径。",
     "tool:pwsh": "非零退出会以 `[exit code: N]` 标记报告；继续之前先查清失败原因。在 Windows 上，被强杀的进程以 `[exit code: 1]` 结算，且不带信号标记；中断之后出现的裸 exit 1 应视为进程被终止，而不是命令失败。",
+    "tool:bash": {
+      "en": "Check the [exit code: N] marker on every bash result; investigate failures before moving on.",
+      "zh": "每条 bash 结果都要看 `[exit code: N]` 标记；先查清失败原因再继续。"
+    },
     "tool:read": "查看文本文件请用 read 工具，而不是 cat 之类的 shell 命令。结果带行号。读大文件时用 offset 与 limit 续读。",
     "tool:write": "用 write 工具创建文件或整体替换文件内容。已存在的文件会被覆盖，所以先读一遍（默认的 fs-observation-policy 要求这么做）；局部改动优先用 edit。",
     "tool:edit": "对现有 UTF-8 文本文件做局部改动请用 edit 工具。它把字面量 old_string 替换为 new_string；默认情况下 old_string 必须恰好出现一次。如果 old_string 出现多次，给出更具体的 old_string，或者把 replace_all 设为 true。先读文件（默认的 fs-observation-policy 要求这么做），除非它就是你本次会话刚创建或刚编辑过的。",
