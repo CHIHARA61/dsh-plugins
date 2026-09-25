@@ -1,0 +1,33 @@
+{
+  "tools": {
+    "web_fetch": {
+      "description": "抓取某个具体 HTTP(S) URL 的内容，并解码为文本返回。",
+      "parameters": {
+        "properties.url.description": "要抓取的 HTTP(S) URL。"
+      }
+    },
+    "web_search": {
+      "description": "在网上检索最新信息。在必填的 queries 数组里提供 1–4 条查询。返回一个可选的摘要答案，以及一组来源 URL。",
+      "parameters": {
+        "properties.queries.description": "必填的搜索查询；接受 1–4 项，并把它们的结果合并。"
+      }
+    },
+    "workflow": {
+      "description": "运行一段 JavaScript workflow 脚本，大规模编排子代理。需要把工作扇出到许多互不依赖的片段时用它——对许多文件做一次审计、一次迁移、多角度调研、对结论做对抗式验证——此时你把编排写成脚本，而不是一轮一轮地委派。\n\nworkflow 的身份随 `meta` 参数以 JSON 形式传入：必填 `name`（短 kebab-case）与 `description` 字符串，可选 `whenToUse` 字符串和 `phases` 数组（`{title, detail?, provider?, model?}`）。`script` 参数**只**是纯 JavaScript 的函数体（不是 TypeScript，也**不要**写 `export const meta` 语句——meta 是参数，不是代码），以顶层 await 运行；结尾写 `return <value>`——该值必须可 JSON 序列化，它就是本工具的结果。\n\n脚本体内的钩子：\n- `agent(prompt, opts?): Promise<any>` —— 把一个子代理跑到完成。不给 `opts.schema` 时，它解析为子级的最终文本；给了 `opts.schema`（一个以对象为根的 JSON Schema，只允许 type/properties/required/additionalProperties/items/enum/const/oneOf——没有 pattern/format/数值边界）时，它解析为校验后的对象。子级失败时解析为 `null`（用 `.filter(Boolean)` 过滤掉）。其他 opts：`label`（展示用）、`phase`（进度分组），以及彼此独立的 `provider`/`model` LLM 目标覆盖（两者可以只给其中一个）。任何别的选项（`effort`/`isolation`/`agentType`）都会被明确拒绝并报错。\n- `pipeline(items, ...stages): Promise<any[]>` —— 让每个 item 独立走完这些阶段，阶段之间**没有**屏障（多阶段工作优先用它）。每个阶段收到 `(prev, item, index)`。某个阶段普通地抛错会把那个 **item** 丢成 `null`，并跳过它剩下的阶段。\n- `parallel(thunks): Promise<any[]>` —— 并发运行若干零参数函数并等待**全部**完成（这是屏障；只有当某个阶段确实需要此前所有结果聚齐时才用）。抛错的 thunk 解析为 `null`。\n- `phase(title)` —— 开始一个进度阶段；`log(message)` —— 叙述进度；`args` —— 本次工具调用的 `args` 输入，原样提供。\n\n被误用的钩子（参数不对、选项未知、schema 不受支持、触发上限）会抛出错误，**总是**直接终结整个脚本——它们绝不会化解为某个 item 的 `null`。\n\n约束：并发数与 agent 总数都有上限；脚本里没有文件系统、网络、定时器，也不提供任何 Node.js API——干活的是那些 agent，脚本只负责协调。运行默认在前台执行：整个脚本跑完时本次调用才返回。长时间运行时设 `run_in_background: true`：调用立即返回一个 job id，运行在后台继续编排，它的返回值随任务的完成通知一起送达（用 `job_output` 查看，用 `job_kill` 停止）。",
+      "parameters": {
+        "properties.script.description": "纯 JS 的 workflow 脚本体（允许顶层 await；**不要**写 `export const meta` 语句；结尾写 `return <json-value>`）。",
+        "properties.meta.description": "workflow 的身份块（纯 JSON——绝不是代码）。",
+        "properties.meta.properties.name.description": "短的 kebab-case workflow 名。",
+        "properties.meta.properties.description.description": "一句话说明这个 workflow 做什么。",
+        "properties.meta.properties.whenToUse.description": "可选：说明这个 workflow 适用于什么场景。",
+        "properties.meta.properties.phases.description": "可选的阶段声明，由 phase() 调用按名字匹配。",
+        "properties.meta.properties.phases.items.properties.title.description": "阶段标题，phase() 调用按这个字符串精确匹配。",
+        "properties.meta.properties.phases.items.properties.detail.description": "可选：对这个阶段的一句话说明。",
+        "properties.meta.properties.phases.items.properties.provider.description": "可选：预期这个阶段使用的 provider 覆盖。",
+        "properties.meta.properties.phases.items.properties.model.description": "可选：预期这个阶段使用的 model 覆盖。",
+        "properties.args.description": "可选：作为脚本内 `args` 全局变量暴露的 JSON 输入（裸列表请包成一个字段，例如 {\"files\": [...]}）。",
+        "properties.run_in_background.description": "作为后台任务运行：立即返回一个 job id 而不是等待；返回值随完成通知一起送达。"
+      }
+    }
+  }
+}

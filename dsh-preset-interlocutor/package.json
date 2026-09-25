@@ -1,0 +1,12 @@
+{
+  "name": "@local/dsh-preset-interlocutor",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Agent preset 思辨模式（诤友）：强对话、弱执行的思辨对手。",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

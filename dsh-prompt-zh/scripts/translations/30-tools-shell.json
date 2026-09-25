@@ -1,0 +1,25 @@
+{
+  "tools": {
+    "pwsh": {
+      "description": "执行一条 PowerShell 命令（`pwsh -Command`）并返回它的 stdout/stderr。每次调用都在一个全新的 pwsh 进程里运行：调用之间不保留任何状态（cwd、变量、函数）——要换目录请传 `workdir`，不要用 `cd`。路径用原生 Windows 形式（`C:\\...`）；读环境变量用 `$env:NAME`。非零退出会以 `[exit code: N]` 报告。当前 harness 环境的事实通过受管的 `$env:DSH_*` 变量暴露；需要时读它们。命令可能在文件沙箱下运行；被拦下的文件操作会以 `[sandbox: file access denied under <mode> mode]` 报告——那是策略拒绝，不是命令本身的 bug；不要换一种方式重试。过长的输出会被截断到尾部；完整输出会保存到一个文件，可用时会给出该文件的路径。在 Windows 上，被强杀的命令以 `[exit code: 1]` 结算，且不带信号标记——应视为中断，而不是命令失败。对长时间运行的命令设 `run_in_background: true`：调用会立即返回一个 job id；用 `job_output` 读它的输出，用 `job_kill` 停掉它。前台命令到达超时不会被杀死：它同样转为后台，返回它的 job id 以及此前已有的输出。在 Windows 沙箱下，只读模式的 pwsh 运行在 PowerShell ConstrainedLanguage 模式，而 workspace-write 保持在 FullLanguage，除非宿主策略另有规定。只读模式下优先用 cmdlet 与核心类型（`[string]`、`[datetime]`、`[regex]`、`[guid]`）；.NET 静态调用（`[System.IO.*]::`、`[math]::`）、`Add-Type`、COM 对象和反射都会以 \"only core types\" 错误失败。`-f` 格式化、属性访问和核心 cmdlet 可以正常工作。在两种受限模式下，程序都无法打开命名管道，因此凡是经由管道 stdio 捕获另一个程序输出的命令（Node.js 的 `child_process.spawn`/`exec`，使用默认 `stdio: 'pipe'`）都会以 EPERM 失败，而 `stdio: 'inherit'` 与 `stdio: 'ignore'` 的 spawn 可以工作，PowerShell 自身的管道也不受影响。那个 EPERM 就是文档化的边界：不要换一种方式重试该命令——把这条完全相同的命令提权重试一次，或者改造它以避免捕获输出。尝试一条沙箱可能拒绝的命令是安全且符合预期的：直接跑它并读标记，而不是先假定它会被拒绝。当一条命令被拒绝、而更宽的模式能让它成功时，在同一轮里立刻提权——这是被拒绝之后唯一被许可的例外：用 `sandbox_permissions`（够用的最窄的更宽模式）加上一句 `justification`，把完全相同的命令重试一次。不要绕道聊天先问许可——那次重试弹出的审批提示就是用户表示同意的方式。如果会话声明审批提示已禁用，就没有例外：拒绝是最终结果——不要设置 `sandbox_permissions`。永远不要投机性提权：请求必须以一次真实的拒绝为依据——通常就是这条命令刚刚撞上的那次；只有本次会话已经拒绝过同样的访问时，才可以直接预先提权。被驳回的提权对该命令是最终的——停下来解释，绝不要绕开它——但这并不禁止之后再尝试或提权别的命令。",
+      "parameters": {
+        "properties.command.description": "要执行的 PowerShell 命令。",
+        "properties.description.description": "用主动语态清楚简洁地说明这条命令做什么，5-10 个词（会展示在 UI 里）。示例：\"ls\" → \"List files in current directory\"；\"git status\" → \"Show working tree status\"；\"Get-Process\" → \"List running processes\"。",
+        "properties.timeoutMs.description": "超时毫秒数。执行器会套用它配置的默认值与上限；超时后命令会转为后台任务，而不是被杀死。",
+        "properties.workdir.description": "这条命令的工作目录。默认为会话工作区；相对路径按它解析。",
+        "properties.run_in_background.description": "在后台运行并立即返回一个 job id（用 job_output 收集，用 job_kill 停止）。不限超时。",
+        "properties.sandbox_permissions.description": "这条命令需要的更宽沙箱模式。仅在沙箱刚刚拒绝了某条命令、要一次性重试它时有效；需要理由和用户批准。",
+        "properties.justification.description": "与 sandbox_permissions 同时必填：用一句话向用户说明这条命令为什么需要更宽的权限。"
+      }
+    },
+    "write": {
+      "description": "创建一个 UTF-8 文本文件，或整体替换它的内容。",
+      "parameters": {
+        "properties.file_path.description": "要写入的路径，由文件系统后端解析。",
+        "properties.content.description": "要写入的完整 UTF-8 文本内容。",
+        "properties.sandbox_permissions.description": "这次文件操作需要的更宽沙箱模式。仅在沙箱刚刚拒绝了某次操作、要一次性重试它时有效；需要理由和用户批准。",
+        "properties.justification.description": "与 sandbox_permissions 同时必填：用一句话向用户说明这次文件操作为什么需要更宽的权限。"
+      }
+    }
+  }
+}

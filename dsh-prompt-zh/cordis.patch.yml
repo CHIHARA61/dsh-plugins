@@ -1,0 +1,8 @@
+# dsh-prompt-zh bundle patch: inserts the 中文提示词 plugin into a profile's layer stack.
+- insert:
+    - id: prompt-zh
+      name: 'dsh-prompt-zh'
+      config:
+        sections: true
+        contexts: true
+        tools: true

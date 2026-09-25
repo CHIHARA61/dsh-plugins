@@ -1,0 +1,54 @@
+{
+  "name": "dsh-prompt-zh",
+  "version": "0.1.0",
+  "description": "DeepSeek Harness 中文提示词插件：按稳定标识符把模型可见的系统提示词段落、运行时上下文与工具说明翻译成中文，并报告漏译。",
+  "type": "module",
+  "license": "MIT",
+  "icon": "./icon.svg",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "files": [
+    "index.js",
+    "lib",
+    "dict",
+    "locale",
+    "icon.svg",
+    "cordis.patch.yml",
+    "scripts",
+    "README.md",
+    "README.zh.md"
+  ],
+  "scripts": {
+    "test": "node scripts/selftest.mjs",
+    "build:dict": "node scripts/build-dict.mjs"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "chinese",
+    "zh-cn",
+    "localization",
+    "i18n",
+    "l10n",
+    "system-prompt"
+  ],
+  "dsh": {
+    "engines": {
+      "dsh": ">=0.1.7-rc.1"
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/schemastery": ">=3.18.1"
+  }
+}

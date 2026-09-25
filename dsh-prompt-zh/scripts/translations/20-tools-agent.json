@@ -1,0 +1,93 @@
+{
+  "tools": {
+    "list_agents": {
+      "description": "按持久 id 与标签列出你那些可继续的后台子代理。用它回忆你启动过哪些，而不是用来轮询完成情况——某个子代理结束时会有人告诉你。状态来自实时注册表：running 表示该 agent 此刻正在工作；inactive 表示没有轮次在执行，无论这个子级是已加载还是需要被恢复。inactive 不描述任务是否完成、成功、失败，也不表示在等其他 agent。`send_message` 会在最近的步骤边界处给运行中的子级转向，或者为 inactive 的子级开始或恢复一个轮次；直接子级在任何状态下都是 `send_message` 的候选。快照不是投递承诺——`send_message` 才会做权威检查，而且仍可能失败。读不到的子在 `descendants` 范围下只作为诊断信息报告。`descendants` 范围以稳定的前序遍历你下面的整棵树，为每条记录标注它的持久直接父会话 id 与深度。你只能对深度 1 的记录使用 `send_message`；更深的记录只能作为 `interrupt_agent` 的候选。",
+      "parameters": {
+        "properties.scope.description": "children（默认）只列直接子级；descendants 遍历你下面的整棵树。"
+      }
+    },
+    "plugin_manager": {
+      "description": "列出当前 profile 里的插件或组合包、启用或停用它们、安装一个组合包，或移除已安装的组合包。每个动作都需要 danger-full-access 权限，或针对本次调用的批准。批准不会改变会话的权限模式。改动影响这个 profile 里的每一个会话。先列出以取得确切的标识符。安装软件包可能执行已放行的构建脚本。live profile 的改动立即生效；startup profile 需要重启。不兼容的 DSH peer 依赖会阻止安装与激活。版本豁免有崩溃与数据丢失风险：授予之前先警告用户，并取得用户对确切的插件与运行时版本的明确许可。",
+      "parameters": {
+        "properties.action.description": "管理操作。",
+        "properties.target.description": "按 action 而定：插件条目 id、组合包名，或安装 spec。",
+        "properties.enabled.description": "set 类操作必填；安装时默认为 true。对 set_version_exemption，true 表示授予，false 表示撤销。",
+        "properties.runtimeVersion.description": "用于 set_version_exemption：来自 list_version_exemptions 的确切 DSH 版本。target 必须是清单里的 package-name@version，不能是别名或版本范围。",
+        "properties.acceptRisk.description": "授予豁免时使用：只有先警告用户可能崩溃与数据丢失、并取得用户对这对确切插件/运行时版本的明确许可之后，才传 true。泛泛的安装许可不算。",
+        "properties.approvedBuilds.description": "用于 install_bundle：只有在对话中用户明确批准运行这些包的安装脚本之后，才传入 pendingBuilds 里的名字。这会为本 profile 授予持久许可。",
+        "properties.registry.description": "用于 install_bundle：用户点名了就先问这个 npm registry URL；否则先问已配置的 registry，以及某个 registry 不可达时配置的备用源。",
+        "properties.offset.description": "从 0 开始的列表偏移；默认为 0。",
+        "properties.limit.description": "列表分页大小，1 到 100；默认为 25。"
+      }
+    },
+    "present": {
+      "description": "把会话文件系统中可访问的、已经存在的选定文件声明为最终交付物。当用户需要一份单独的文件交付物时才用 present，尤其是 Office 文档、电子表格和幻灯片。直接展示在最终答复里就够用时就优先那么做；创建或编辑文件本身并不要求调用 present。通常挑最重要的 1-2 个交付物；需要时再多几个，但一次 present 调用最多 4 个文件。这些文件必须已经存在。用户打开的是当前源文件；它们的内容不会被复制或留存。",
+      "parameters": {
+        "properties.files.items.properties.path.description": "一个已存在的普通文件的路径。相对路径按会话工作目录解析。",
+        "properties.files.items.properties.description.description": "给用户看的简短说明。"
+      }
+    },
+    "read": {
+      "description": "读取一个 UTF-8 文本文件，返回带行号的内容。",
+      "parameters": {
+        "properties.file_path.description": "要读取的路径，由文件系统后端解析。",
+        "properties.offset.description": "从第几行开始返回（从 1 开始）。默认为 1。",
+        "properties.limit.description": "最多返回多少行。默认为 2000。"
+      }
+    },
+    "read_image": {
+      "description": "读取一个 PNG/JPEG/WebP/GIF 文件，返回图像本身。可以传不带扩展名的路径；格式从文件内容判定，因此规范化过的附件路径可以直接传入，无需复制或改名。Harness 会在下一次模型请求之前校验并把受支持的大图缩小，所以仅仅为了看一眼图片就直接用本工具，不要为此安装图像库或生成缩略图。互不依赖的文件可以小批量并发读取。要求当前模型接受图像输入。",
+      "parameters": {
+        "properties.file_path.description": "图像文件的路径，由文件系统后端解析。"
+      }
+    },
+    "send_message": {
+      "description": "按 agent id 给一个直接可继续子级发消息。如果你本身是一个常驻的可继续子级，也可以把消息发给你的直接父级。目标仍在工作时，消息会在它最近的步骤处转向；目标处于 inactive 时，消息会开始或恢复一个轮次。这个调用不会从该 agent 带回答复——只确认消息已投递。失败意味着消息**没有**投递。",
+      "parameters": {
+        "properties.agent_id.description": "你的直接可继续子级的 agent id；当你自己是常驻的可继续子级时，也可以是你的直接父级。",
+        "properties.message.description": "要投递给该 agent 的消息。"
+      }
+    },
+    "skill": {
+      "description": "加载某个可用 skill 的完整说明。当任务点名了某个 skill、或明显匹配它时，先带上该 skill 的确切名字调用本工具，再动手。",
+      "parameters": {
+        "properties.name.description": "可用 skill 列表里那个确切的 skill 名。"
+      }
+    },
+    "subagent": {
+      "description": "把一个自成一体的任务委派给子代理（一个在自己的上下文里工作的独立 agent），以便把需要专注、互不依赖的工作——调研、一个范围明确的实现、一次分析——卸出去，不让它占用本对话的上下文。子代理返回的是它的结果，不是它的中间步骤。给它一份完整、独立的提示词：它看不到本对话。本工具默认在后台运行，立即返回一个持久 subagent id，并让子对话保留下来供后续轮次使用。该运行结算时，运行时会向父级发一条通知，包含其结果与最终的 assistant 消息（如果有）；`send_message` 会在子级运行时给它的最近步骤转向，在它 inactive 时开始或恢复一个轮次。只有下一步动作依赖收到结果时，才设 `run_in_background: false`。",
+      "parameters": {
+        "properties.description.description": "对被委派任务的简短描述（3-5 个词），用于展示。",
+        "properties.prompt.description": "给子代理的完整、自成一体的任务。它不共享本对话的上下文，所以把它需要的一切都写进去。",
+        "properties.run_in_background.description": "是否在后台运行并立即返回一个持久 subagent id。默认为 true。当下一步动作依赖结果时设为 false 以等待结果。"
+      }
+    },
+    "subagent_fork": {
+      "description": "把一个任务委派给一个继承本对话的子代理：子 agent 以目前为止全部已完成的轮次作为初始上下文（它看不到当前正在进行的这一轮）。当子任务建立在本对话的上下文之上时用它——一次后续分析、一次评审、一次续写——同时不让工作本身占用本对话的上下文。你收到的是它的结果，不是它的中间步骤。本工具默认在后台运行，立即返回一个持久 subagent id，并让子对话保留下来供后续轮次使用。该运行结算时，运行时会向父级发一条通知，包含其结果与最终的 assistant 消息（如果有）；`send_message` 会在子级运行时给它的最近步骤转向，在它 inactive 时开始或恢复一个轮次。只有下一步动作依赖收到结果时，才设 `run_in_background: false`。",
+      "parameters": {
+        "properties.description.description": "对被委派任务的简短描述（3-5 个词），用于展示。",
+        "properties.prompt.description": "给子代理的任务。它已经能看到本对话已完成的轮次，所以可以放心在此基础上展开，只说明新增的内容。",
+        "properties.run_in_background.description": "是否在后台运行并立即返回一个持久 subagent id。默认为 true。当下一步动作依赖结果时设为 false 以等待结果。"
+      }
+    },
+    "todo_write": {
+      "description": "为当前工作记录并更新一份结构化的任务清单。每次调用都要发送**整个**列表——它会**替换**上一份列表（没有增量更新，也不能单独改某一项）。用它来规划多步骤工作并展示进度：动手之前为每一个具体步骤加一条 todo。正在被实际推进的每一条 todo 都标成 `in_progress`——工作确实在并行时（例如并发的子代理或后台命令）可以同时有好几条，顺序推进的工作只留一条；只要还有工作没做完，就至少应有一条是 `in_progress`。一条 todo 做完的那一刻就把它标成 `completed`（不要攒着一起标），并且只有全部工作都完成了才允许没有 `in_progress` 项。琐碎的单步任务跳过这份清单。状态取值：`pending`（尚未开始）、`in_progress`（正在做）、`completed`（已完成）。",
+      "parameters": {
+        "properties.todos.description": "**完整**的任务列表，替换掉之前任何一份列表。",
+        "properties.todos.items.properties.content.description": "这条任务是做什么的——一句简短的祈使句。",
+        "properties.todos.items.properties.status.description": "pending（尚未开始）| in_progress（正在做）| completed（已完成）。"
+      }
+    },
+    "update_goal": {
+      "description": "更新确切的当前目标 revision。edit、pause、resume 需要来自人类顶层的直接请求。在当前目标的自动继续过程中，也允许 complete 与 blocked。blocked 在达到配置的最小轮次数之前会被拒绝；判断同一个条件是否连续贯穿了那几个轮次，仍是模型的责任，并且必须在 blocked_reason 里说明。",
+      "parameters": {
+        "properties.goal_id.description": "get_goal 返回的确切 id。",
+        "properties.revision.description": "get_goal 返回的确切正整数 revision。",
+        "properties.action.description": "edit | pause | resume | complete | blocked",
+        "properties.objective.description": "替换用的目标内容；只在 action 为 edit 时有效。",
+        "properties.max_goal_rounds.description": "替换用的轮次上限；只在 action 为 edit 时有效。",
+        "properties.blocked_reason.description": "具体的阻塞条件；只在 action 为 blocked 时必填。"
+      }
+    }
+  }
+}

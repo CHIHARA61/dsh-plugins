@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Chinese Prompts (zh-CN)",
+    "description": "Localizes the model-facing system prompt, runtime contexts, and tool descriptions into Chinese, keyed by stable section/tool identifiers, and reports anything left untranslated."
+  }
+}

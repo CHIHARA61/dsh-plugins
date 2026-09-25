@@ -1,0 +1,95 @@
+{
+  "tools": {
+    "ask_user_question": {
+      "description": "需要确认、选择或补充信息才能继续时，向用户提一个简洁的问题。每个问题带一个稳定 id，答案里会回显它。",
+      "parameters": {
+        "properties.questions.description": "要继续之前要问用户的问题。",
+        "properties.questions.items.properties.id.description": "这个问题的稳定 id；答案里会回显它。",
+        "properties.questions.items.properties.question.description": "要问用户的具体问题。",
+        "properties.questions.items.properties.header.description": "可选的短标题，例如 \"Confirm\" 或 \"Choose Mode\"。",
+        "properties.questions.items.properties.options.description": "可选的候选项，展示给用户。如果你想推荐其中一个，把它放第一位，并在该标签后加 \"(Recommended)\"。",
+        "properties.questions.items.properties.options.items.properties.label.description": "面向用户的短选项标签。",
+        "properties.questions.items.properties.options.items.properties.description.description": "用一句话说明这个选项的取舍或影响。",
+        "properties.questions.items.properties.multi_select.description": "用户是否可以多选。默认为 false。"
+      }
+    },
+    "cordis_inspect_list": {
+      "description": "列出宿主当前已知的每一个 Cordis Inspect Provider，包括本地宿主 Provider 和从 Client 同步过来的最新清单。每条都给出它的平台、用途、只读方法与输入/输出 schema。写插件或配置插件之前先调用本工具，然后从结果里挑出 provider 与 method 交给 cordis_inspect_query。不要猜名字，也不要把 Inspect 方法当成插件代码可以调用的业务 Service。"
+    },
+    "cordis_inspect_query": {
+      "description": "执行 Inspect Provider 声明的一次只读查询。platform、provider、method 必须来自 cordis_inspect_list，input 必须满足该方法的 schema。写插件代码之前用本工具读取确切的 Service 方法、Event 模式、插件 Config schema、Tool schema、主题 token，或实时的 Slot 树与 props。宿主查询在本地执行。Client 查询会等到第一个有效页面响应；在某个页面应答或工具被取消之前它一直挂起。本工具不能调用业务 Service 方法，也不能修改运行时。",
+      "parameters": {
+        "properties.platform.description": "拥有该 Provider 的运行时平台。",
+        "properties.provider.description": "cordis_inspect_list 返回的确切 Provider ID。",
+        "properties.method.description": "Provider 清单声明的方法的确切名称。",
+        "properties.input.description": "可选的查询输入；必须满足该方法的输入 schema。"
+      }
+    },
+    "create_goal": {
+      "description": "当眼前的直接人类请求是一个需要跨自主目标轮次持续推进的长期目标时，创建一个持久化在同会话内的完成目标。即使用户没有说出\"创建一个目标\"，也可以这样推断意图。不要为琐碎的单轮工作使用它。执行会拒绝非人类以及子代理的授权。",
+      "parameters": {
+        "properties.objective.description": "从直接人类请求中推断出的具体完成目标。",
+        "properties.max_goal_rounds.description": "可选的正安全整数，限制自动继续轮次的上限。"
+      }
+    },
+    "edit": {
+      "description": "以替换字面量文本的方式编辑一个已有的 UTF-8 文本文件。",
+      "parameters": {
+        "properties.file_path.description": "要编辑的路径，由文件系统后端解析。",
+        "properties.old_string.description": "要被替换的字面量文本。必须完全匹配。",
+        "properties.new_string.description": "替换进去的字面量文本。传空字符串表示删除该匹配。",
+        "properties.replace_all.description": "是否替换所有匹配。默认为 false；为 false 时 old_string 必须恰好出现一次。",
+        "properties.sandbox_permissions.description": "这次文件操作需要的更宽沙箱模式。仅在沙箱刚刚拒绝了某次操作、要一次性重试它时有效；需要理由和用户批准。",
+        "properties.justification.description": "与 sandbox_permissions 同时必填：用一句话向用户说明这次文件操作为什么需要更宽的权限。"
+      }
+    },
+    "exit_plan_mode": {
+      "description": "只在计划模式下使用。把你的计划提交给用户审阅，获得批准后离开计划模式。把完整计划以 markdown 发出，首行是以 # 开头的标题。用户可以批准（从你的下一步开始执行该计划），也可以继续规划——他们的反馈会通过工具结果回到你这里；修改之后重新提交。",
+      "parameters": {
+        "properties.plan.description": "完整计划，markdown 格式，首行是以 # 开头的标题。"
+      }
+    },
+    "get_goal": {
+      "description": "读取当前的同会话目标，包括确切的 id/revision、目标内容、阶段、已完成的继续轮次、轮次上限、存在时的阻塞原因，以及是否已武装下一次继续。更新目标之前先调用它。"
+    },
+    "glob": {
+      "description": "查找路径匹配某个 glob 模式的文件。返回匹配的文件路径——绝不含目录——包括隐藏文件和被忽略的文件（VCS 元数据目录除外）。最多返回 100 条，按修改时间排序；结果更多时返回按修改时间排序的前 100 条，并说明这一点以及完整排序列表的保存位置。本工具不枚举目录条目。",
+      "parameters": {
+        "properties.pattern.description": "用来匹配文件路径的 glob 模式（例如 \"**/*.ts\"、\"src/**/*.test.js\"）。不含 \"/\" 的模式匹配任意深度的文件名，所以 \"*\" 与 \"*.ts\" 都会搜索整棵树；要锚定深度就带上分隔符。",
+        "properties.path.description": "要搜索的目录。默认为会话工作区；相对路径按它解析。"
+      }
+    },
+    "grep": {
+      "description": "用 ripgrep 正则搜索文件内容。返回命中的行及其行号，按文件分组。内联返回前 250 条匹配；结果被截断时会说明完整匹配列表的保存位置。需要看命中处的上下文时，用 read 读那个文件。",
+      "parameters": {
+        "properties.pattern.description": "要搜索的正则表达式（ripgrep 语法）。",
+        "properties.path.description": "要搜索的文件或目录。默认为会话工作区；相对路径按它解析。",
+        "properties.include.description": "只有一个 glob 过滤器，用来限定搜索哪些文件（例如 \"*.ts\"、\"*.{js,jsx}\"）。它不是列表；不支持取反。"
+      }
+    },
+    "interrupt_agent": {
+      "description": "按 agent id 请求取消某个后台 agent 当前的轮次。目标可以是你的直接子级，也可以是你之下更深层的 agent。只有当前轮次会停下：已经为该 agent 排队的消息会一直停放到之后某次 send_message，它启动的 agent 继续运行，它本身也仍然可以接受后续追问。这个调用在停止请求被接受时就返回，所以目标可能还会短暂运行；中断一个已经结束的 agent 是被接受的空操作。",
+      "parameters": {
+        "properties.agent_id.description": "要中断的运行中 agent 的 agent id。"
+      }
+    },
+    "job_kill": {
+      "description": "按 job id 请求取消一个正在运行的后台任务。立即返回；任务在其工作真正停止后以 killed 结算。",
+      "parameters": {
+        "properties.job_id.description": "启动该后台工作的工具返回的 job id。",
+        "properties.reason.description": "可选的简短原因，会记入日志并转发给该任务。"
+      }
+    },
+    "job_list": {
+      "description": "列出你的后台任务（运行中的与已结束的），以及它们的 id、kind 和状态。"
+    },
+    "job_output": {
+      "description": "读取一个后台任务。流式任务只返回自上次读取以来的输出；最终输出任务在结算后返回它的结果。每个响应都以 `[status: ...]` 结尾。除非 `wait: true`，否则读取是非阻塞的；`wait: true` 最多等到配置的上限。",
+      "parameters": {
+        "properties.job_id.description": "启动该后台工作的工具返回的 job id。",
+        "properties.wait.description": "阻塞到任务到达终态或超时为止。等待超时时返回 [status: running]，并让任务保持存活。",
+        "properties.timeout_ms.description": "最长等待毫秒数（只在 wait: true 时有意义）。默认为配置的等待上限；再高也被配置的最大值封顶。"
+      }
+    }
+  }
+}

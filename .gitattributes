@@ -1,0 +1,8 @@
+# 这个仓库在 Windows 上维护、在 macOS 上被消费；不钉住换行符会在每次提交时
+# 产生整文件的假 diff。
+* text=auto eol=lf
+
+# 二进制/生成物按原样处理
+*.tgz binary
+*.png binary
+*.ico binary
