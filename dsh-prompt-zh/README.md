@@ -63,6 +63,8 @@ Run it after a DSH upgrade and it tells you exactly what needs translating — t
 
 The bundled dictionary is `dict/zh.json`. An entry may be a bare string, or an object with `zh` plus one matcher: `exact` (verbatim match), `match` (whole-text regex replace, `$1` allowed), or `capture` (regex used only to extract values, substituted into `zh`). `variants` tries several rules in order; `en` is a drift baseline written back by the build script and never used for matching; `force` bypasses the already-Chinese rule.
 
+The bundled dictionary is calibrated against the prompt DSH `0.1.7-rc.1` actually emits (Windows desktop profile): 22 sections, 2 contexts, 37 tools, and 124 parameter descriptions, with 0 `missing` and 0 `drift` in that assembly — reproduce with `scripts/selftest.mjs` and `scripts/replay.mjs`.
+
 Dictionaries merge in this order, later winning: bundled `dict/*.json` (sorted by filename), `$DSH_HOME/prompt-zh/zh.json`, then any files listed in `DSH_PROMPT_ZH_DICT` (`;`-separated on Windows, `:` elsewhere).
 
 Dictionaries are read as data and invalidated by mtime, so **editing a dictionary needs no host restart** — only editing code does. One override entry is enough to change a single sentence into your own wording.
@@ -92,6 +94,7 @@ Degradation is per entry, never the whole prompt — which is the difference fro
 ## Known limits
 
 - The fixed first line of the runtime-context snapshot (`Current runtime context. This snapshot supersedes earlier runtime-context snapshots.`) is joined **after** the assembly waterfall, so this plugin cannot reach it.
+- The skill-catalog reminder (the `<system-reminder>` block carrying the `available_skills` list) is injected as a user message after assembly as well, so the plugin cannot reach that either: it stays English and never appears in the coverage report.
 - Tool names, parameter names, and enum values stay as they are — they are part of the calling protocol.
 - Prompts only. UI copy belongs to `@deepseek-ai/dsh-client-locale`.
 - `@deepseek-ai/schemastery` is used only to build the settings-page Config schema, and its construction is wrapped in `safeConfig()`: if the schema cannot be built, you lose the settings page but translation keeps working, and the host never fails to boot. It is the plugin's only third-party import.

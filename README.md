@@ -134,6 +134,13 @@ git clone https://github.com/<你的用户名>/dsh-plugins.git ~/dsh-plugins
   写成 `{ "en": "...", "zh": "..." }`，`build-dict` 会原样透传。
   注意 `en` 只对「无条件替换」的条目生效；带 `exact`/`match`/`capture`/`variants` 的条目
   不要写它。
+- **没有 host 也能出报告**：会话日志就是现成的报告来源。解压
+  `~/.dsh/sessions/<cwd>/<session>/session.v4.jsonl.zstd`（多帧 zstd，逐帧解），其中
+  `system/message` 是模型收到的提示词全文、`request/header` 是真正发出的 `tools`
+  （含全部参数说明）。把两者拼成 `{ sections: [{path, en}], contexts: [...], tools: [...] }`
+  就是 `build-dict --report` 吃的形状——0.2.0 这轮刷新就是这么做的：一次覆盖
+  22 个段落、32 个工具、98 条参数说明的基线。**已经是中文的条目不要写进报告**
+  （`en` 会被写成中文）；报告没覆盖到的条目会自动继承旧基线。
 - **`en` 与原文不符的后果是"保留英文"而不是"乱译"**：无条件条目的 `en` 一旦与宿主实际
   发出的原文不同，`resolveEntry` 判为 `drift`，译文**不会被应用**。所以给条件性文本
   （如 `bash`/`pwsh` 的描述）写基线时，要基线与该平台默认装配产出的原文一致。

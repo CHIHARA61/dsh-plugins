@@ -77,6 +77,8 @@ DSH 升级之后跑一遍报告，就知道这次有哪些新东西需要翻译�
 
 ## 词表
 
+随包词表按 DSH `0.1.7-rc.1` 实际发出的提示词校准（Windows 桌面 profile）：段落 22、上下文 2、工具 37、参数说明 124，本轮装配 0 漏译、0 漂移——可用 `scripts/selftest.mjs` 与 `scripts/replay.mjs` 复现。
+
 内置词表在 `dict/zh.json`，条目形状：
 
 ```jsonc
@@ -156,6 +158,7 @@ node scripts/replay.mjs --with-missing
 ## 已知边界
 
 - 运行时上下文快照的固定首句（`Current runtime context. This snapshot supersedes earlier runtime-context snapshots.`）是在装配瀑布**之后**拼接的，本插件管不到它。
+- skill 目录提醒（`<system-reminder>` 加 `available_skills` 清单）同样是宿主在装配**之后**以 user 消息注入的，插件也够不到：它是英文的，且不会出现在覆盖率报告里。
 - 工具名、参数名、枚举值不译——它们是调用协议的一部分。
 - 只翻提示词，不翻界面文案。界面语言由 `@deepseek-ai/dsh-client-locale` 负责。
 - Agent preset 里自带的段落（例如 `standard` 的 persona）会被翻，前提是它还是英文；用户自己写的中文不会被覆盖。
