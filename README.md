@@ -35,19 +35,34 @@ git config --global https.proxy http://127.0.0.1:7890
 
 ## 安装
 
-在 DSH 的插件安装入口（桌面端：设置 → 插件）里粘两行：
+在 DSH 的插件安装入口（桌面端：设置 → 插件）里粘两行。这个框认的是**仓库地址**，
+子目录用 `#path:/` 片段指定：
 
 ```
-github:<你的用户名>/dsh-plugins#path:/dsh-prompt-zh
-github:<你的用户名>/dsh-plugins#path:/dsh-preset-interlocutor
+https://github.com/<你的用户名>/dsh-plugins#path:/dsh-prompt-zh
+https://github.com/<你的用户名>/dsh-plugins#path:/dsh-preset-interlocutor
 ```
 
-* `<你的用户名>` 换成 GitHub 用户名；`#path:` 指向 mono-repo 里的子目录。
-* 不用终端、不用 clone、不用装 Node/pnpm（桌面端自带）。
-* 想钉版本可以把 ref 和 path 一起写：
-  `github:owner/repo#v1.2.0&path:/dsh-prompt-zh`。语法是支持的，但如果仓库**根目录**
-  有 `prepare`/install 脚本会触发 `allowBuilds` 门；本仓库根目录没有 `package.json`，
-  不会遇到这个问题。
+`github:<你的用户名>/dsh-plugins#path:/dsh-prompt-zh` 这种简写也收，两者等价
+（pnpm 会把 URL 规范化成简写写进 profile）。带不带 `.git` 都行。
+
+⚠️ **不要粘浏览器里子目录页的地址。** 复制地址栏拿到的是
+`https://github.com/owner/dsh-plugins/tree/main/dsh-prompt-zh`，那个装不上，
+报 `Could not resolve main/dsh-prompt-zh`。子目录只能用 `#path:/` 片段表达。
+
+⚠️ **`#path:` 不能省。** 本仓库是多包结构，根目录没有 `package.json`。
+只粘仓库根地址（`https://github.com/owner/dsh-plugins`）会装出一个没有
+`dsh.bundle` 声明的空壳，并警告 `declares no dsh.bundle — installed as a plain
+dependency, not a profile layer`，插件不会生效。
+
+其他形式（都受支持，择一即可）：
+
+* 钉版本：`https://github.com/owner/dsh-plugins#v1.2.0&path:/dsh-prompt-zh`。
+  语法支持，但如果仓库**根目录**有 `prepare`/install 脚本会触发 pnpm 的
+  `allowBuilds` 门；本仓库根目录没有 `package.json`，不会遇到。
+* 本地目录／tarball：粘**绝对路径**（`~` 不展开），例如
+  `/Users/you/dsh-plugins/dsh-prompt-zh`。装目录得到 `link:`，见「更新」一节。
+* 不用终端、不用 clone、不用装 Node/pnpm（桌面端自带包管理器）。
 
 ---
 
@@ -57,7 +72,7 @@ github:<你的用户名>/dsh-plugins#path:/dsh-preset-interlocutor
 
 ```
 卸载 dsh-prompt-zh
-粘贴 github:<你的用户名>/dsh-plugins#path:/dsh-prompt-zh
+粘贴 https://github.com/<你的用户名>/dsh-plugins#path:/dsh-prompt-zh
 ```
 
 ⚠️ **只"再装一次"不会更新。** 锁文件把 commit 钉死在 codeload 地址里，例如
