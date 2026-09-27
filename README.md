@@ -80,8 +80,9 @@ dependency, not a profile layer`，插件不会生效。
 pnpm 会报 `Lockfile is up to date, resolution step is skipped` 并停在旧版本。
 只有先 `remove` 才会重新解析到分支最新的 commit。
 
-桌面端的插件管理器没有 update 动词（服务只有 `installBundle` / `removeBundle` /
-`setBundleEnabled` 这些），所以"卸载 + 再装"是唯一路径——好在两步都在同一个界面里。
+桌面端的**内置**插件管理器没有 update 动词（服务只有 `installBundle` / `removeBundle` /
+`setBundleEnabled` 这些），所以那里"卸载 + 再装"是唯一路径——好在两步都在同一个界面里。
+装了 dshmarket 的话它自己带「更新」动作，失败与回滚见下一节。
 
 **如果更新变得频繁**，改成 clone + 装目录会省事得多：
 
@@ -92,6 +93,40 @@ git clone https://github.com/<你的用户名>/dsh-plugins.git ~/dsh-plugins
 然后把两个**目录绝对路径**粘进安装入口。装目录得到 `link:`，profile 里的
 `node_modules/<包名>` 变成指向仓库的符号链接，之后 `git pull` 直接改到已安装的文件，
 不需要卸载重装（重启 DSH 加载新代码；纯词表改动连重启都不用）。
+
+---
+
+## 更新失败了 / 要装回旧版本
+
+dshmarket 自己带「更新」动作：它按 spec 重新解析来源，失败时会尝试自动回滚。但回滚只对
+**它能精确表达的目标**有效。本仓库是 monorepo，安装目标带 `#path:/dsh-prompt-zh` 子目录
+选择器，而 dsh-cli 的目标语法不接受同时表达「精确提交 + 子目录」所需的 `&`，于是它会报：
+
+> 更新前的 GitHub 来源使用 monorepo 子目录（提交 …），当前 DSH 命令无法表达该精确目标，
+> 因此自动回滚不可用；需要时请手工重新安装该提交。
+
+**这句话只说明回滚做不了，不说明更新为什么失败。** 真正的原因看同一个对话框里的原始报错，
+或那台机器上的 `~/.dsh/profiles/<profile>/.plugin-manager/logs/operation-*/pnpm.log`。
+实测最常见的两种：
+
+1. **manifest 里的 spec 钉了提交。** spec 形如
+   `github:OWNER/REPO#<sha>&path:/dsh-prompt-zh` 时，更新走的是 `pnpm update <name>`，
+   而它在这种 spec 上只会打印 `Already up to date` 原地不动（实测），更新必然失败。
+   把 spec 改成浮动形式（只带 `#path:`、不带提交）再更新即可。
+2. **拉不到 GitHub。** 那台机器上 git 没走代理，见上面「前提」一节。
+
+装回旧版本 / 钉到某个提交，只能用能表达 `&` 的工具——在 Mac 上用 DSH 自带的 pnpm：
+
+```sh
+cd ~/.dsh/profiles/<profile>
+# 跟分支最新（等价于 GUI 里「卸载 → 再装同一个 spec」）
+pnpm add "github:OWNER/REPO#path:/dsh-prompt-zh"
+# 钉到某个提交
+pnpm add "github:OWNER/REPO#<sha>&path:/dsh-prompt-zh"
+```
+
+profile 目录里的 `package.json` 会被改写；如果插件同时从 `dsh.profile.bundles` 里掉了，
+记得加回去（GUI 安装会自动做这一步，手工 pnpm 不会）。装完重启 DSH；纯词表改动不用重启。
 
 ---
 
