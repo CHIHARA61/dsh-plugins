@@ -1,10 +1,35 @@
 {
   "name": "@local/dsh-preset-interlocutor",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
-  "description": "Agent preset 思辨模式（诤友）：强对话、弱执行的思辨对手。",
+  "description": "Agent preset 思辨模式（诤友）：强对话、弱执行的思辨对手；附带只读的文档读取工具（Word / PDF / 幻灯片 / 表格）。",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "lib",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node test/ooxml.test.mjs && node test/pdf.test.mjs && node test/tool.test.mjs"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "agent-preset",
+    "docx",
+    "pdf"
+  ],
   "dsh": {
+    "engines": {
+      "dsh": ">=0.1.7-rc.1"
+    },
     "bundle": {
       "patch": "./cordis.patch.yml"
     }

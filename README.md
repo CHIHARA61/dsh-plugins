@@ -5,11 +5,16 @@
 | 目录 | 插件 | 作用 |
 |---|---|---|
 | `dsh-prompt-zh/` | 中文提示词 | 把模型看到的系统提示词、运行时上下文、工具说明翻成中文 |
-| `dsh-preset-interlocutor/` | 思辨模式（诤友） | 一个 agent preset：强对话、弱执行 |
+| `dsh-preset-interlocutor/` | 思辨模式（诤友） | 一个 agent preset：强对话、弱执行；自带只读文档读取工具 `read_doc`（Word / PDF / 幻灯片 / 表格） |
 
 两个包都是 DSH 的 **profile bundle**：装进某个 profile 并登记进它的
 `dsh.profile.bundles` 才生效。两个包都**没有 `prepare`/install 脚本**（只有 `test`
 和 `build:dict`），所以从 git 安装不会触发 pnpm 的构建许可门（`allowBuilds`）。
+
+「思辨模式」的 preset 声明与 `read_doc` 工具在同一个包里：bundle patch 声明 preset，
+`index.js` 是那个工具插件，preset 的子插件行按**包名**引用它（`@local/dsh-preset-interlocutor`），
+所以两者一起装、一起走。工具是纯 JS、零第三方依赖的，细节与已知边界见
+[`dsh-preset-interlocutor/README.md`](dsh-preset-interlocutor/README.md)。
 
 ---
 
@@ -182,6 +187,12 @@ profile 目录里的 `package.json` 会被改写；如果插件同时从 `dsh.pr
 - **改完记得跑 `node scripts/selftest.mjs`。** 它会对着 `en` 基线逐条校验，
   并模拟上游改动；`build-dict` 在不带 `--report` 时**不会**报告"某工具缺 description"
   这类遗漏——`selftest` 会。
+- **`dsh-preset-interlocutor` 的测试**：`npm test`（等价于依次跑 `test/pdf.test.mjs`、
+  `test/ooxml.test.mjs`、`test/tool.test.mjs`）。PDF 那组用**代码里手工构造**的合成件
+  （文本 / 纯图 / 加密 / xref 损坏），所以永远可跑；真实语料与 Office 素材在仓库外的
+  `_research/` 下，缺失时相应断言会跳过并打印获取方式，不会假通过。
+  写文档抽取时的经验：**先跟 oracle 对齐再谈"手写解析"**——PDF 那套是与 pypdfium2
+  逐页比相似度调出来的，Office 那套是与 python-docx / python-pptx / openpyxl 逐行比出来的。
 - **版本要求**：`dsh-prompt-zh` 声明 `dsh >= 0.1.7-rc.1`；「思辨模式」用的声明行机制
   在 `0.1.7-rc.1` 已就位（该版本含 `dsh-agent-preset` / `dsh-agent-preset-registry` /
   `dsh-client-ui-agent-preset`）。0.1.5 那条线用的是目录式 preset，装不上。
