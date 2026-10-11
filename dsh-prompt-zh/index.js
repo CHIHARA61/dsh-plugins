@@ -110,10 +110,14 @@ export function apply(ctx, config) {
 			const notes = translateAssembly(result, settings, dict);
 
 			// 用户自己的 persona（或别的插件）已经要求过「用中文思考」时，把自己那一段清空：
-			// 空文本的段落 DSH 渲染时会丢掉，等于本轮没注入。段落本身仍留在注册表里，
+			// 空文本的段落 DSH 渲染时会丢掉，等于本轮没显示。段落本身仍留在注册表里，
 			// 下一轮重新装配时又是一段完整文本，所以这个判断每一轮都算一次。
+			// 条件里带上 `settings.sections`：段落翻译被关掉时 `keepThinking` 会退回默认的
+			// true，不加这一条就会把别处注册的同名段落的内容盖成插件自己的话。
 			const own = result.sections?.find((section) => section !== null && typeof section === 'object' && section.name === THINKING_SECTION_NAME);
-			if (own !== undefined && typeof own.text === 'string') own.text = notes.keepThinking ? THINKING_SECTION_TEXT : '';
+			if (own !== undefined && typeof own.text === 'string') {
+				own.text = settings.sections !== false && notes.keepThinking ? THINKING_SECTION_TEXT : '';
+			}
 
 			if (settings.warnUntranslated !== false && logger !== undefined) {
 				const fresh = problemsOf(notes).filter((problem) => {
