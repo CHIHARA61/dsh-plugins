@@ -9,6 +9,13 @@
  *   - contexts  运行时上下文快照（沙箱策略、审批策略、子代理委派……）
  *   - tools     工具描述与参数说明（含嵌套 schema）
  *
+ * `sections` 开着时，还会注册一段 `prompt-zh:thinking-language`
+ * （正文见 `lib/translate.js` 的 `THINKING_SECTION_TEXT`，开关 `thinkInChinese`）：
+ * DSH 的 DeepSeek 适配器没有「思考语言」开关，模型要拿中文思考，只能每轮靠这句
+ * 系统提示词；原文里已经有人要求过就不叠加。它走的是 DSH 的段落注册表
+ * （`ctx.systemPrompt.section()`），不是在装配钩子里塞段落——那是 DSH 插件开发
+ * 规范要求的写法，也让卸载/关闭开关能干净还原。
+ *
  * 与「按英文原文匹配词表」的方案不同，这里按**稳定标识符**匹配：段落名
  * （`tool:read`、`harness:identity`……）、上下文名、工具名、参数路径。上游改写
  * 英文措辞不会让译文失效；只有新增段落、新增工具或新增参数才会漏译，而漏译会在
@@ -29,6 +36,9 @@ import { fileURLToPath } from 'node:url';
 import z from '@deepseek-ai/schemastery';
 import { DEFAULTS, buildConfig, safeConfig } from './lib/config.js';
 import {
+	THINKING_SECTION_NAME,
+	THINKING_SECTION_ORDER,
+	THINKING_SECTION_TEXT,
 	createDictLoader,
 	dictFilesFor,
 	problemsOf,
@@ -77,11 +87,33 @@ export function apply(ctx, config) {
 		);
 	}
 
+	// 「思考过程用中文」那一段：走段落注册表（DSH 插件开发规范要求的写法），
+	// 关掉开关就干脆不注册，卸载时 `ctx.effect` 的 disposer 把它摘掉——两条路径都不留痕。
+	// 位置在最后（order 见 lib/translate.js 的 THINKING_SECTION_ORDER）：不改 DSH 自己的开场白，
+	// 也不破坏前缀 KV cache。
+	if (settings.sections !== false && settings.thinkInChinese !== false) {
+		ctx.effect(
+			() =>
+				ctx.systemPrompt.section({
+					name: THINKING_SECTION_NAME,
+					order: THINKING_SECTION_ORDER,
+					text: THINKING_SECTION_TEXT
+				}),
+			'prompt-zh.thinking-section'
+		);
+	}
+
 	ctx.on('system-prompt/assemble', async (assembly, _context, next) => {
 		const result = await next();
 		try {
 			const dict = loader.current(logger);
 			const notes = translateAssembly(result, settings, dict);
+
+			// 用户自己的 persona（或别的插件）已经要求过「用中文思考」时，把自己那一段清空：
+			// 空文本的段落 DSH 渲染时会丢掉，等于本轮没注入。段落本身仍留在注册表里，
+			// 下一轮重新装配时又是一段完整文本，所以这个判断每一轮都算一次。
+			const own = result.sections?.find((section) => section !== null && typeof section === 'object' && section.name === THINKING_SECTION_NAME);
+			if (own !== undefined && typeof own.text === 'string') own.text = notes.keepThinking ? THINKING_SECTION_TEXT : '';
 
 			if (settings.warnUntranslated !== false && logger !== undefined) {
 				const fresh = problemsOf(notes).filter((problem) => {

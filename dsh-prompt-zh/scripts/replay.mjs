@@ -73,14 +73,41 @@ const assembly = {
 	variables: {}
 };
 
+/**
+ * 段落注册表桩：入口用 `ctx.systemPrompt.section()` 交付「思考过程用中文」那一段，
+ * 所以替身 ctx 也得有注册表，并在装配时按宿主的方式把注册的段落排进 `assembly.sections`
+ * （真实宿主会在瀑布之前按 order 排序；这里照做，好让重放看到的位置与线上一致）。
+ */
+const registry = [];
+const collectSections = () => {
+	const registered = registry.map((entry) => ({ name: entry.name, text: entry.text }));
+	const merged = new Map(assembly.sections.map((section) => [section.name, section]));
+	for (const section of registered) merged.set(section.name, section);
+	return [...merged.values()].sort((left, right) => (sectionOrder(left.name) ?? 0) - (sectionOrder(right.name) ?? 0));
+};
+const sectionOrder = (name) => registry.find((entry) => entry.name === name)?.order ?? 0;
+
 const handlers = [];
 const ctx = {
 	logger: {
 		info: (message) => console.log(`[info] ${message}`),
 		warn: (message) => console.warn(`[warn] ${message}`)
 	},
+	effect: (callback) => {
+		const dispose = callback();
+		return typeof dispose === 'function' ? dispose : () => {};
+	},
 	on(event, handler) {
 		if (event === 'system-prompt/assemble') handlers.push(handler);
+	},
+	systemPrompt: {
+		section(entry) {
+			registry.push(entry);
+			return () => {
+				const index = registry.indexOf(entry);
+				if (index !== -1) registry.splice(index, 1);
+			};
+		}
 	}
 };
 apply(ctx, { verbose: true, reportPath: flag('--reportPath') ?? '' });
@@ -88,6 +115,8 @@ if (handlers.length !== 1) {
 	console.error(`入口没有注册唯一的 system-prompt/assemble 处理器（拿到 ${handlers.length} 个）`);
 	process.exit(1);
 }
+// 宿主是先按注册表建好整份装配，再走瀑布。重放照此办理。
+assembly.sections = collectSections();
 
 // `--with-missing` 往装配里塞两样词表肯定没有的东西，用来看「漏译」在日志里长什么样，
 // 也顺便验证警告只报一次（下面会走第二遍装配）。

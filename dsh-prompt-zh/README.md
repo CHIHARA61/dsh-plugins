@@ -2,7 +2,7 @@
 
 English | [中文](README.zh.md)
 
-Turns **the prompt the model actually sees** in DeepSeek Harness into Chinese: system-prompt sections, the runtime-context snapshot, tool descriptions, and tool parameter descriptions. It patches nothing in DSH itself and uninstalls clean.
+Turns **the prompt the model actually sees** in DeepSeek Harness into Chinese: system-prompt sections, the runtime-context snapshot, tool descriptions, and tool parameter descriptions — and gets the model's own thinking into Chinese with it. It patches nothing in DSH itself and uninstalls clean.
 
 ## Why not an English-phrase translation table
 
@@ -41,9 +41,33 @@ The settings appear under **Settings → Plugins → Plugin configuration** (dsh
 | `sections` | `true` | Translate system-prompt sections |
 | `contexts` | `true` | Translate the runtime-context snapshot |
 | `tools` | `true` | Translate tool descriptions and parameter descriptions |
+| `thinkInChinese` | `true` | Register one section telling the model to think in Chinese (last in the section list; inactive while `sections` is off) |
 | `warnUntranslated` | `true` | Log one warning per newly seen untranslated/drifted/broken entry |
 | `reportPath` | `''` | When set, write the coverage report to this absolute path (per assembly, only when it changed) |
 | `verbose` | `false` | Log a one-line count per assembly |
+
+## Making the model think in Chinese
+
+The prompt turns Chinese but the thinking stays English — because the DSH DeepSeek adapter **sends no thinking-language instruction at all**: the only thinking-related request fields are `output_config.effort` and `thinking.type`, with no language switch. The only lever left is the system prompt, which is present every single turn.
+
+So while `sections` is on (and `thinkInChinese` is not off), the plugin registers one section, `prompt-zh:thinking-language`, with order 20000 — right after `deployment:persona-suffix`:
+
+> 无论用户使用什么语言，你的思考过程都必须用中文。回答用什么语言不变，照旧跟随用户。
+
+(No matter what language the user writes in, your thinking must be in Chinese. The answer language does not change; it still follows the user.)
+
+That section is the plugin's own — it shadows no DSH-registered section, and it is not a dictionary entry or a coverage-report row, because it is not a translation of any English text. Three choices are worth stating:
+
+- **Why a new section instead of hooking onto an existing one.** DSH has no section about the model's own thinking language: the persona belongs to the user, and `harness:identity` is a statement of identity. Attaching to either would be rewriting someone else's words.
+- **Why `ctx.systemPrompt.section()` instead of pushing a section inside the assembly hook.** Registering is what the DSH plugin-writing rules require ("Add prompt text with `ctx.systemPrompt.section()`"). This plugin's translate hook does only one thing for it — deciding whether someone else already asked — and blanks its own section in place for that turn, so both stay compliant. A registered section is visible to `system-prompt/change` and can be overridden wholesale by a preset or another plugin using the same name.
+- **Why last rather than first.** The prompt still opens with DSH's own `harness:identity`, and more importantly the prefix KV cache survives: appending leaves every earlier section byte-identical, while prepending would invalidate every user's whole cached prefix on each plugin release.
+
+Two guards:
+
+- **Someone already asked for it, so it is not shown.** If your own persona already contains a requirement like "用中文思考" or "think in Chinese" (both languages are recognized; the word for thinking and the word for Chinese must land in the same sentence), the plugin blanks its own section for that turn (DSH drops empty sections when rendering) and keeps your wording. The check reads only the **pre-translation** text, so the plugin's own Chinese output cannot trip it. To word it yourself, turn `thinkInChinese` off and write it in the persona.
+- **The section name stays unique.** A duplicate section name fails DSH's whole assembly invariant, so the plugin registers exactly one section and never inserts a second.
+
+Two ways to turn it off: `thinkInChinese: false` (this sentence only), or `sections: false` (this sentence together with section translation).
 
 ## Untranslated text is never silent
 
@@ -94,6 +118,9 @@ Degradation is per entry, never the whole prompt — which is the difference fro
 ## Known limits
 
 - The fixed first line of the runtime-context snapshot (`Current runtime context. This snapshot supersedes earlier runtime-context snapshots.`) is joined **after** the assembly waterfall, so this plugin cannot reach it.
+- **There is no thinking-language switch to flip.** Neither DSH nor the DeepSeek adapter sends such an instruction (the request carries only `output_config.effort` and `thinking.type`), so "think in Chinese" can only ride the system prompt — it is a request, not an enforcement, and the model may still occasionally think in English.
+- With an agent preset that sets `complete: true`, DSH replaces the whole section list with that one section (the copy taken **before** the waterfall), so the section this plugin registers (including the Chinese-thinking one) and all section translation stop applying; contexts and tool descriptions are unaffected.
+- The Chinese-thinking section has a fixed position (last, order 20000). DSH's scoped layer shadows the global layer by section name, so any agent preset or plugin that registers a `prompt-zh:thinking-language` section of its own replaces both its position and its wording.
 - The skill-catalog reminder (the `<system-reminder>` block carrying the `available_skills` list) is injected as a user message after assembly as well, so the plugin cannot reach that either: it stays English and never appears in the coverage report.
 - Tool names, parameter names, and enum values stay as they are — they are part of the calling protocol.
 - Prompts only. UI copy belongs to `@deepseek-ai/dsh-client-locale`.

@@ -11,6 +11,62 @@ import { delimiter, isAbsolute, join, resolve } from 'node:path';
 /** 是否为「原文已经是中文」——命中则默认跳过替换。 */
 export const HAS_CJK = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\u3000-\u303f]/;
 
+/**
+ * 「思考过程用中文」这一段的名字、正文与位置。
+ *
+ * DSH 与 DeepSeek 适配器都不下发任何「思考语言」指令——请求体里与思考有关的只有
+ * `output_config.effort` 与 `thinking.type`，没有语言开关——所以唯一办法是在每一轮
+ * 都出现的系统提示词里显式要求一次。DSH 没有内容匹配「模型自身行为要求」的注册段落
+ * （persona 属于用户、`harness:identity` 是身份声明），所以这里新增一段，用
+ * `prompt-zh:` 前缀与 DSH 自己的段落名区分开。
+ *
+ * 段落由入口 `index.js` 通过 `ctx.systemPrompt.section()` 注册（DSH 的插件开发规范
+ * 要求「加提示词文本用注册表」，而不是在装配钩子里塞段落），本文件只提供它的名字、
+ * 正文、位置与「要不要显示」的判据。
+ */
+export const THINKING_SECTION_NAME = 'prompt-zh:thinking-language';
+
+/**
+ * 段落的 order：排在 `deployment:persona-suffix`（10200）之后。
+ *
+ * DSH 的 first-party 位置落在 -1000..10200 之间，官方文档说外部贡献者可以用任意有限
+ * 数值，所以取一个在它们之上的整数。选「最后」而不是「最前」有两个理由：
+ *   - 提示词布局仍以 DSH 自己的 `harness:identity` 开场；
+ *   - 前缀 KV cache 不被破坏——往末尾追加，前面的段落逐字节不变；往最前插入，
+ *     本插件每升一版都会让所有用户的整段前缀缓存失效一次。
+ */
+export const THINKING_SECTION_ORDER = 20000;
+
+/** 注入的正文；回答语言不跟着变，避免把「用中文思考」误读成「只准说中文」。 */
+export const THINKING_SECTION_TEXT = '无论用户使用什么语言，你的思考过程都必须用中文。回答用什么语言不变，照旧跟随用户。';
+
+/**
+ * 「已经写过同类要求」的识别规则：中英文都认，要求「思考/推理」与「中文/汉语/Chinese」
+ * 落在同一句里（中间不超过 24 个字符）。只对**原文**跑这条规则：内置译文是插件自己写的，
+ * 不该反过来把自己的注入关掉。
+ */
+export const THINKING_REQUEST =
+	/(?:思考|推理|思维|reason\w*|think\w*)[^\n。；;!?]{0,24}?(?:中文|汉语|Chinese)|(?:中文|汉语|Chinese)[^\n。；;!?]{0,24}?(?:思考|推理|思维|reason\w*|think\w*)/i;
+
+/**
+ * 本轮该不该显示 {@link THINKING_SECTION_NAME} 那一段。
+ *
+ * 判据只有一条：**别人**已经写过同类要求就不再叠加。用户在自己的 agent preset 里
+ * 写中文 persona 时经常会带上这句话，此时插件的注入属于多余，去掉它，尊重用户原文。
+ * 传进 `assembly.sections` 必须来自 `translateAssembly` 返回的 `sections`（该函数扫的是
+ * 翻译**之前**的原文），否则插件自己写的中文译文会把自己判成「有人写过了」。
+ * @param sections - 本轮装配的段落列表（已含本插件注册的那一段）。
+ * @returns 需要显示返回 `true`；本插件那一段不在列表里、或别人已写过时返回 `false`。
+ */
+export function keepThinkingSection(sections) {
+	if (!Array.isArray(sections)) return false;
+	const own = sections.find((section) => section !== null && typeof section === 'object' && section.name === THINKING_SECTION_NAME);
+	if (own === undefined) return false;
+	return !sections.some(
+		(section) => section !== own && section !== null && typeof section === 'object' && typeof section.text === 'string' && THINKING_REQUEST.test(section.text)
+	);
+}
+
 /** 一条译文条目：`{ zh, exact?/match?/capture?/en?/variants? }`，也接受直接写字符串。 */
 function normalizeEntry(entry) {
 	if (typeof entry === 'string') return { zh: entry };
@@ -215,21 +271,32 @@ function translateSchema(node, entry, path, notes) {
 
 /**
  * 对本轮装配应用翻译，并返回覆盖率记录。
+ *
+ * 顺带回报「本插件的 {@link THINKING_SECTION_NAME} 这一段本轮该不该显示」：那一段
+ * 由入口 `index.js` 注册进 DSH 的段落注册表，**不在本函数里注入**——本函数只负责
+ * 在翻译过程中扫一遍原文，回答「别人是不是已经写过同样的要求」。扫描必须发生在
+ * 翻译之前，否则插件自己写的中文译文会把「别人写过」判成真。
  * @param assembly - `system-prompt/assemble` 瀑布拿到的装配结果，**就地**改写。
- * @param config - `sections`/`contexts`/`tools` 三个开关。
+ * @param config - `sections`/`contexts`/`tools` 三个翻译开关。
  * @param dict - 当前生效的词表。
+ * @returns `{ sections, contexts, tools, keepThinking }`：前三项是覆盖率记录，
+ *   `keepThinking` 交给 {@link keepThinkingSection} 决定那一段留不留。
  */
 export function translateAssembly(assembly, config, dict) {
-	const notes = { sections: [], contexts: [], tools: [] };
+	const notes = { sections: [], contexts: [], tools: [], keepThinking: true };
 
 	if (config.sections !== false && Array.isArray(assembly.sections)) {
 		for (const section of assembly.sections) {
 			if (section === null || typeof section !== 'object' || typeof section.text !== 'string' || section.text.length === 0) continue;
+			// 插件自己注册的那一段不走词表、也不进覆盖率记录：同一份装配被重放时
+			// （`scripts/replay.mjs --with-missing` 就是这么干的），它不该被报成漏译。
+			if (section.name === THINKING_SECTION_NAME) continue;
 			const original = section.text;
 			const result = resolveEntry(dict.sections[section.name], original);
 			if (result.status === 'translated') section.text = result.text;
 			notes.sections.push(makeNote(section.name, original, result, result.text));
 		}
+		notes.keepThinking = keepThinkingSection(assembly.sections);
 	}
 	if (config.contexts !== false && Array.isArray(assembly.contexts)) {
 		for (const context of assembly.contexts) {

@@ -2,7 +2,7 @@
 
 [English](README.md) | 中文
 
-把 DeepSeek Harness 里**模型看到的那份提示词**换成中文：系统提示词段落、运行时上下文快照、工具描述与参数说明。不修改任何 DSH 源码，卸载即还原。
+把 DeepSeek Harness 里**模型看到的那份提示词**换成中文：系统提示词段落、运行时上下文快照、工具描述与参数说明，并让模型的思考过程也跟着用中文。不修改任何 DSH 源码，卸载即还原。
 
 ## 它和「按英文原文查词表」有什么不同
 
@@ -41,6 +41,7 @@ dsh plugin --profile web add dsh-prompt-zh
 | `sections` | `true` | 翻译系统提示词段落 |
 | `contexts` | `true` | 翻译运行时上下文快照 |
 | `tools` | `true` | 翻译工具描述与参数说明 |
+| `thinkInChinese` | `true` | 注册一段「思考过程必须用中文」（在段落列表末尾；`sections` 关闭时不生效） |
 | `warnUntranslated` | `true` | 出现漏译/漂移/坏正则时，向宿主日志警告一次 |
 | `reportPath` | `''` | 非空时把覆盖率报告写到这个绝对路径（每次装配，内容有变化才写） |
 | `verbose` | `false` | 每次装配向宿主日志打一行统计 |
@@ -51,6 +52,27 @@ dsh plugin --profile web add dsh-prompt-zh
   config:
     reportPath: "C:/Users/me/dsh-zh-report.json"
 ```
+
+## 让模型用中文思考
+
+提示词是中文了，模型的思考过程却还是英文——因为 DSH 的 DeepSeek 适配器**不下发任何「思考语言」指令**：请求体里与思考有关的只有 `output_config.effort` 与 `thinking.type`，没有语言开关。所以唯一可行的办法是在**每一轮都会出现**的系统提示词里显式要求一次。
+
+插件在 `sections` 开着（且 `thinkInChinese` 没关）时，注册一段 `prompt-zh:thinking-language`（order 20000，排在 `deployment:persona-suffix` 之后）：
+
+> 无论用户使用什么语言，你的思考过程都必须用中文。回答用什么语言不变，照旧跟随用户。
+
+这一段是插件新增的，不覆盖 DSH 的任何注册段落，也不进词表与覆盖率报告（它不是某段英文的译文）。三处取舍写在下面：
+
+- **为什么新加一段，而不是挂在现成段落上。** DSH 没有一段专讲「模型自身的思考语言」：persona 属于用户、`harness:identity` 是身份声明，往哪一段上挂都是在改别人的话。
+- **为什么走 `ctx.systemPrompt.section()` 注册，而不是在装配钩子里塞段落。** 注册是 DSH 插件开发规范要求的写法（"Add prompt text with `ctx.systemPrompt.section()`"）。本插件的翻译钩子只做「别人写过没有」这一个判断，并在装配里就地清空自己那一段，所以两边都合规。注册的段落进注册表：`system-prompt/change` 事件看得见它，preset 或别的插件也能用同名段落整体遮蔽它。
+- **为什么排在最后而不是最前。** 提示词仍以 DSH 自己的 `harness:identity` 开场；更重要的是前缀 KV cache——往末尾追加时前面的段落逐字节不变，往最前插入则本插件每升一版都会让所有用户的整段前缀缓存失效一次。
+
+两条防呆：
+
+- **别人写过就不显示。** 你自己的 persona 里已经写了「用中文思考」「think in Chinese」这类要求（中英文都认，要求「思考/推理」与「中文/Chinese」落在同一句里），插件那一轮就把自己这段清空（DSH 渲染时会丢掉空段落），替你保留原话。判断只看**翻译之前**的原文，所以插件自己译出来的中文不会误伤这条。想要自己的措辞，推荐关掉 `thinkInChinese`、在 persona 里自己写。
+- **段落名唯一。** 同一段落名在装配里出现两次会让 DSH 的装配不变量直接判失败，所以插件只注册一段，也不会在装配里重复插入。
+
+关掉它的两种方式：`thinkInChinese: false`（只关这一句）或 `sections: false`（连同段落翻译一起关掉）。两种情况下都是**根本不注册**这一段；卸载插件则由 `ctx.effect` 的 disposer 摘掉，都不留痕迹。
 
 ## 覆盖率报告：漏译看得见
 
@@ -158,6 +180,9 @@ node scripts/replay.mjs --with-missing
 ## 已知边界
 
 - 运行时上下文快照的固定首句（`Current runtime context. This snapshot supersedes earlier runtime-context snapshots.`）是在装配瀑布**之后**拼接的，本插件管不到它。
+- **思考语言没有开关可用。** DSH 与 DeepSeek 适配器都不下发这类指令（请求体里只有 `output_config.effort` 与 `thinking.type`），所以「用中文思考」只能靠提示词——它是请求，不是强制，模型仍可能偶尔用英文思考。
+- 用了 `complete: true` 的 agent preset 时，DSH 会把整份段落列表换成 preset 那一段（取的是瀑布**之前**的副本），本插件注册的段落（含中文思考要求）与所有段落翻译都会随之失效；上下文与工具描述不受影响。
+- 「用中文思考」那一段的位置是固定的（末尾，order 20000）。DSH 的 scoped 层按段名遮蔽全局层，所以某个 agent preset 或别的插件只要注册一段同名的 `prompt-zh:thinking-language`，就能整体替换掉它的位置与措辞。
 - skill 目录提醒（`<system-reminder>` 加 `available_skills` 清单）同样是宿主在装配**之后**以 user 消息注入的，插件也够不到：它是英文的，且不会出现在覆盖率报告里。
 - 工具名、参数名、枚举值不译——它们是调用协议的一部分。
 - 只翻提示词，不翻界面文案。界面语言由 `@deepseek-ai/dsh-client-locale` 负责。

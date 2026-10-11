@@ -14,6 +14,7 @@ export const CONFIG_FIELDS = {
 	sections: '翻译系统提示词段落',
 	contexts: '翻译运行时上下文快照',
 	tools: '翻译工具描述与参数说明',
+	thinkInChinese: '注册一段「思考过程必须用中文」（在段落列表末尾；sections 关闭时不生效）',
 	warnUntranslated: '出现漏译/漂移时向宿主日志警告一次',
 	reportPath: '非空时把覆盖率报告写到这个绝对路径',
 	verbose: '每次装配记一行统计'
@@ -24,6 +25,7 @@ export const DEFAULTS = {
 	sections: true,
 	contexts: true,
 	tools: true,
+	thinkInChinese: true,
 	warnUntranslated: true,
 	reportPath: '',
 	verbose: false
@@ -34,6 +36,7 @@ const TYPES = {
 	sections: 'boolean',
 	contexts: 'boolean',
 	tools: 'boolean',
+	thinkInChinese: 'boolean',
 	warnUntranslated: 'boolean',
 	reportPath: 'string',
 	verbose: 'boolean'
