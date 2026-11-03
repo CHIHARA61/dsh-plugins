@@ -1,0 +1,53 @@
+{
+  "tools": {
+    "schedule_create": {
+      "description": "在当前会话里创建一个提醒，到点后把 prompt 投递出来。计时参数只能给一个：after_seconds、at、every_seconds、daily、weekly 或 cron。时区里不存在的本地时间会被跳过；重复的本地时间只在较早的那一刻触发一次。停机之后，重复提醒只会投递最近一次错过的那次。崩溃之后投递可能重复。",
+      "parameters": {
+        "properties.prompt.description": "到点时要展示的提醒内容。",
+        "properties.title.description": "用用户语言写的简洁任务名，最多 120 个字符。只写核心动作与对象；保留 PR 号、分支名这类必要的目标标识。不要写执行频率（如 daily、hourly）、计划日期/时间、时区、任务状态，也不要写配置与执行细节（如只读模式、profile-tag 过滤），即使这些内容本来就嵌在请求或现有标题里也一样。不要追加括注。把调度信息放进计时参数，把执行指令放进 prompt。",
+        "properties.after_seconds.description": "延迟秒数，整数。",
+        "properties.every_seconds.description": "固定间隔秒数，整数，至少 60，与创建时刻对齐；用 schedule_update 改它时会重新对齐到保存时刻。",
+        "properties.daily.description": "每天在某个本地时间。",
+        "properties.daily.properties.time.description": "HH:mm:ss，可带 1-3 位小数，例如 23:00:00。",
+        "properties.daily.properties.time_zone.description": "UTC 或 IANA Area/Location，例如 Asia/Shanghai。",
+        "properties.weekly.description": "在指定的星期几、某个本地时间。",
+        "properties.weekly.properties.time.description": "HH:mm:ss，可带 1-3 位小数，例如 09:00:00。",
+        "properties.weekly.properties.time_zone.description": "UTC 或 IANA Area/Location，例如 Asia/Shanghai。",
+        "properties.weekly.properties.weekdays.description": "ISO 星期几，周一为 1、周日为 7，不得重复。",
+        "properties.cron.description": "某个时区下的五字段 Vixie cron 表达式。",
+        "properties.cron.properties.expression.description": "分 时 日 月 星期，例如 \"*/15 9-17 * * 1-5\"。两个「日」字段都被限定时，只要其中一个匹配，该日期就算匹配。",
+        "properties.cron.properties.time_zone.description": "UTC 或 IANA Area/Location，例如 Asia/Shanghai。",
+        "properties.at.description": "绝对目标：带偏移的 RFC 3339 日期时间，或者本地日期、时间加 IANA time_zone。"
+      }
+    },
+    "schedule_delete": {
+      "description": "删除当前会话里的一个提醒，无论它是活动的还是已失效的。删除不会撤回已经排进队列的提醒消息。",
+      "parameters": {
+        "properties.id.description": "确切的提醒 id。"
+      }
+    },
+    "schedule_list": {
+      "description": "列出当前会话里活动的提醒。"
+    },
+    "schedule_update": {
+      "description": "就地修改一个提醒，保留它的 id。可以给新的 title、prompt，或者至多一个计时参数；省略的字段保持已存的值。要改相对延迟，请新建一个提醒。",
+      "parameters": {
+        "properties.id.description": "schedule_list 返回的提醒 id。",
+        "properties.title.description": "新的任务名；遵循 schedule_create 的标题规则。",
+        "properties.prompt.description": "新的提醒内容。",
+        "properties.every_seconds.description": "固定间隔秒数，整数，至少 60，与创建时刻对齐；用 schedule_update 改它时会重新对齐到保存时刻。",
+        "properties.daily.description": "每天在某个本地时间。",
+        "properties.daily.properties.time.description": "HH:mm:ss，可带 1-3 位小数，例如 23:00:00。",
+        "properties.daily.properties.time_zone.description": "UTC 或 IANA Area/Location，例如 Asia/Shanghai。",
+        "properties.weekly.description": "在指定的星期几、某个本地时间。",
+        "properties.weekly.properties.time.description": "HH:mm:ss，可带 1-3 位小数，例如 09:00:00。",
+        "properties.weekly.properties.time_zone.description": "UTC 或 IANA Area/Location，例如 Asia/Shanghai。",
+        "properties.weekly.properties.weekdays.description": "ISO 星期几，周一为 1、周日为 7，不得重复。",
+        "properties.cron.description": "某个时区下的五字段 Vixie cron 表达式。",
+        "properties.cron.properties.expression.description": "分 时 日 月 星期，例如 \"*/15 9-17 * * 1-5\"。两个「日」字段都被限定时，只要其中一个匹配，该日期就算匹配。",
+        "properties.cron.properties.time_zone.description": "UTC 或 IANA Area/Location，例如 Asia/Shanghai。",
+        "properties.at.description": "绝对目标：带偏移的 RFC 3339 日期时间，或者本地日期、时间加 IANA time_zone。"
+      }
+    }
+  }
+}

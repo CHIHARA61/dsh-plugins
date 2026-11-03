@@ -136,14 +136,24 @@ const variants = [
 		'Approval prompts are disabled in this session: actions that require approval are rejected automatically — do not request sandbox escalation (do not set `sandbox_permissions`).'
 	],
 	[
-		'section',
-		'harness:source',
-		'The DeepSeek Harness implementation checkout is at C:\\Users\\me\\dsh-checkout. The checkout location and current working directory are separate values and may differ; never infer the working directory from this path. Use pwd to determine the current working directory. Use this checkout only to inspect or extend DSH itself.'
+		'context',
+		'working-directory:current',
+		'Current working directory: "C:\\\\Users\\\\me\\\\ws".'
 	],
 	[
-		'section',
+		'context',
+		'harness:source',
+		'Current DeepSeek Harness implementation checkout: "C:\\\\Users\\\\me\\\\dsh-checkout\\\\".'
+	],
+	[
+		'context',
 		'app:web-surface',
-		'You are interacting with the user through the DeepSeek Harness Web GUI at http://127.0.0.1:3080. When the user refers to "this page", "this GUI", or "this app" without naming another target, they mean this GUI. The browser provides no implicit DOM, route, or screenshot context. The client-plugin HMR receiver is active, but client-plugin changes reload without a refresh only while `pnpm run dev:web` is also running from this same checkout to rebuild their bundles; verify that watcher before promising automatic updates. Every other change — the apps/web shell and plain packages — requires rebuilding the affected Web artifacts and verifying this existing URL after a page refresh. Starting another server does not update this GUI. The apps/web Vite entry builds the shell but is not a standalone application because only dsh web injects window.__DSH_BOOT__. Do not start a replacement server unless the user asks; if one is needed, use a managed background job and verify its exact URL.'
+		'Current DeepSeek Harness Web GUI URL: "http://127.0.0.1:3080".'
+	],
+	[
+		'context',
+		'team:identity',
+		'You are the Team Lead named "lead".\nUse list_agents({}) to find your teammates and their names.\nTo message another teammate, use send_message({ target: "<teammate name>", message: "..." }).'
 	]
 ];
 for (const [kind, pathName, english] of variants) {
@@ -336,9 +346,9 @@ expectDegrade(
 	'Literal text to replace.'
 );
 expectDegrade(
-	'动态段落改了结构（正则不再命中）',
+	'动态上下文改了结构（正则不再命中）',
 	{ status: 'drift', chinese: false },
-	dict.sections['harness:source'],
+	dict.contexts['harness:source'],
 	'The DeepSeek Harness source tree lives at C:\\elsewhere. Check pwd instead.'
 );
 expectDegrade(

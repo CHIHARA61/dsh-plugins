@@ -99,7 +99,11 @@ DSH 升级之后跑一遍报告，就知道这次有哪些新东西需要翻译�
 
 ## 词表
 
-随包词表按 DSH `0.1.7-rc.1` 实际发出的提示词校准（Windows 桌面 profile）：段落 22、上下文 2、工具 37、参数说明 124，本轮装配 0 漏译、0 漂移——可用 `scripts/selftest.mjs` 与 `scripts/replay.mjs` 复现。
+随包词表按 DSH `0.2.1-rc.5` 实际发出的提示词校准（Windows 桌面 profile）：段落 25、上下文 6、工具 60、参数说明 244，本轮装配 0 漏译、0 漂移——可用 `scripts/selftest.mjs` 与 `scripts/replay.mjs` 复现。
+
+其中 8 条是第三方组合包 `dsh-ops`（`ops_*` 工具与 `dsh-ops:discovery-tools` 段落）的译文，单放在 `scripts/translations/80-third-party-dsh-ops.json` 里：没装那个包时这些条目永远匹配不到，装了就能一起变中文。
+
+0.2.1 把「实现代码位置」与「Web 界面地址」拆开了：静态说明仍叫 `harness:source` / `app:web-surface` 段落，动态取值改成同名**上下文**（`Current DeepSeek Harness implementation checkout: "…"`）。词表两种都收，段落用静态译文，上下文用 `match` 正则。
 
 内置词表在 `dict/zh.json`，条目形状：
 
@@ -180,6 +184,7 @@ node scripts/replay.mjs --with-missing
 ## 已知边界
 
 - 运行时上下文快照的固定首句（`Current runtime context. This snapshot supersedes earlier runtime-context snapshots.`）是在装配瀑布**之后**拼接的，本插件管不到它。
+- **DSH 0.2.1 起，整份运行时上下文快照都不受本插件影响。** 模型看到的那段文字由 `SystemPrompt.refreshContext()` 在装配瀑布**之后**按注册的 provider 重新解析（`dsh-agent-loop` 的 `step()` 就是这样取上下文的），本插件在瀑布里改写的 `context.text` 会被那一步丢掉；覆盖率报告仍会把它记成 `translated`，因为报告记的是瀑布里发生的事。受影响的是 `sandbox:policy`、`approval:policy`、`working-directory:current`、`team:identity`、`harness:source`、`app:web-surface` 这几条上下文；段落与工具说明走的是装配结果本身，翻译照常生效。要修只能在 `agent/pre-step` 这类更晚的钩子上改消息，那是另一件事。0.1.7 时代这条路径是通的。
 - **思考语言没有开关可用。** DSH 与 DeepSeek 适配器都不下发这类指令（请求体里只有 `output_config.effort` 与 `thinking.type`），所以「用中文思考」只能靠提示词——它是请求，不是强制，模型仍可能偶尔用英文思考。
 - 用了 `complete: true` 的 agent preset 时，DSH 会把整份段落列表换成 preset 那一段（取的是瀑布**之前**的副本），本插件注册的段落（含中文思考要求）与所有段落翻译都会随之失效；上下文与工具描述不受影响。
 - 「用中文思考」那一段的位置是固定的（末尾，order 20000）。DSH 的 scoped 层按段名遮蔽全局层，所以某个 agent preset 或别的插件只要注册一段同名的 `prompt-zh:thinking-language`，就能整体替换掉它的位置与措辞。

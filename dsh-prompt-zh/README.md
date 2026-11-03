@@ -87,7 +87,11 @@ Run it after a DSH upgrade and it tells you exactly what needs translating — t
 
 The bundled dictionary is `dict/zh.json`. An entry may be a bare string, or an object with `zh` plus one matcher: `exact` (verbatim match), `match` (whole-text regex replace, `$1` allowed), or `capture` (regex used only to extract values, substituted into `zh`). `variants` tries several rules in order; `en` is a drift baseline written back by the build script and never used for matching; `force` bypasses the already-Chinese rule.
 
-The bundled dictionary is calibrated against the prompt DSH `0.1.7-rc.1` actually emits (Windows desktop profile): 22 sections, 2 contexts, 37 tools, and 124 parameter descriptions, with 0 `missing` and 0 `drift` in that assembly — reproduce with `scripts/selftest.mjs` and `scripts/replay.mjs`.
+The bundled dictionary is calibrated against the prompt DSH `0.2.1-rc.5` actually emits (Windows desktop profile): 25 sections, 6 contexts, 60 tools, and 244 parameter descriptions, with 0 `missing` and 0 `drift` in that assembly — reproduce with `scripts/selftest.mjs` and `scripts/replay.mjs`.
+
+Eight of those entries translate the third-party `dsh-ops` bundle (`ops_*` tools and its `dsh-ops:discovery-tools` section) and live in `scripts/translations/80-third-party-dsh-ops.json`: they never match unless that bundle is installed, and then they localize it too.
+
+DSH 0.2.1 split the checkout path and the Web UI URL out of their sections: the static explanation keeps the `harness:source` / `app:web-surface` section names, while the dynamic value became a same-named **context** (`Current DeepSeek Harness implementation checkout: "…"`). The dictionary covers both — a plain translation for the section, a `match` regex for the context.
 
 Dictionaries merge in this order, later winning: bundled `dict/*.json` (sorted by filename), `$DSH_HOME/prompt-zh/zh.json`, then any files listed in `DSH_PROMPT_ZH_DICT` (`;`-separated on Windows, `:` elsewhere).
 
@@ -118,6 +122,7 @@ Degradation is per entry, never the whole prompt — which is the difference fro
 ## Known limits
 
 - The fixed first line of the runtime-context snapshot (`Current runtime context. This snapshot supersedes earlier runtime-context snapshots.`) is joined **after** the assembly waterfall, so this plugin cannot reach it.
+- **Since DSH 0.2.1 the whole runtime-context snapshot is out of reach.** The text the model sees is re-resolved by `SystemPrompt.refreshContext()` from the registered providers *after* the assembly waterfall (`step()` in `dsh-agent-loop` renders it that way), so any `context.text` this plugin rewrote is discarded there. The coverage report still says `translated`, because it reports what happened inside the waterfall. Affected: `sandbox:policy`, `approval:policy`, `working-directory:current`, `team:identity`, `harness:source`, `app:web-surface`. Sections and tool descriptions are rendered from the assembly itself, so they stay translated. Fixing it needs a later hook (an `agent/pre-step` message rewrite), which is a separate change; the path did work on 0.1.7.
 - **There is no thinking-language switch to flip.** Neither DSH nor the DeepSeek adapter sends such an instruction (the request carries only `output_config.effort` and `thinking.type`), so "think in Chinese" can only ride the system prompt — it is a request, not an enforcement, and the model may still occasionally think in English.
 - With an agent preset that sets `complete: true`, DSH replaces the whole section list with that one section (the copy taken **before** the waterfall), so the section this plugin registers (including the Chinese-thinking one) and all section translation stop applying; contexts and tool descriptions are unaffected.
 - The Chinese-thinking section has a fixed position (last, order 20000). DSH's scoped layer shadows the global layer by section name, so any agent preset or plugin that registers a `prompt-zh:thinking-language` section of its own replaces both its position and its wording.

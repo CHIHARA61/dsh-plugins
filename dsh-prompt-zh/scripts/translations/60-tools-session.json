@@ -1,0 +1,57 @@
+{
+  "tools": {
+    "session_search": {
+      "description": "在调用者自己的工作区里搜索以往的会话，并从每个会话里返回最匹配的那个事件。",
+      "parameters": {
+        "properties.query.description": "在以往会话历史里做的字面全文查询。",
+        "properties.session_ids.description": "可选；要包含的会话 id。",
+        "properties.created_at_from.description": "含端点的会话创建时间下界，ISO 8601 带时区。",
+        "properties.created_at_to.description": "含端点的会话创建时间上界，ISO 8601 带时区。",
+        "properties.parent_session_ids.description": "可选；直接父会话 id。",
+        "properties.include_root_sessions.description": "把没有父会话的会话也纳入父级过滤。",
+        "properties.availability.description": "要求至少有一种被选中的来源可用性。",
+        "properties.event_seq_from.description": "含端点的事件序号下界。",
+        "properties.event_seq_to.description": "含端点的事件序号上界。",
+        "properties.event_time_from.description": "含端点的事件时间下界，ISO 8601 带时区。",
+        "properties.event_time_to.description": "含端点的事件时间上界，ISO 8601 带时区。",
+        "properties.event_types.description": "要包含的事件类型。",
+        "properties.event_surfaces.description": "要包含的事件面（surface）。"
+      }
+    },
+    "session_trace": {
+      "description": "读取某个会话周围被授权的会话谱系，包括全部可见的祖先与后代关系。",
+      "parameters": {
+        "properties.session_id.description": "目标会话 id。省略表示当前会话。"
+      }
+    },
+    "session_event_search": {
+      "description": "在某个被授权的会话里搜索更早的事件；当前会话会排除正在执行这次调用的那一步。",
+      "parameters": {
+        "properties.session_id.description": "目标会话 id。省略表示当前会话。",
+        "properties.query.description": "在目标会话上做的字面全文查询。",
+        "properties.seq_from.description": "含端点的事件序号下界。",
+        "properties.seq_to.description": "含端点的事件序号上界。",
+        "properties.time_from.description": "含端点的事件时间下界，ISO 8601 带时区。",
+        "properties.time_to.description": "含端点的事件时间上界，ISO 8601 带时区。",
+        "properties.event_types.description": "要包含的事件类型。",
+        "properties.surfaces.description": "要包含的事件面（surface）。"
+      }
+    },
+    "session_event_trace": {
+      "description": "读取某个被授权会话里一个事件的、指向被引用源事件的每一次直接替换与关系。",
+      "parameters": {
+        "properties.session_id.description": "目标会话 id。省略表示当前会话。",
+        "properties.seq.description": "目标事件的序号。"
+      }
+    },
+    "session_event_read": {
+      "description": "从一个被授权会话里读取一个完整未删节的事件，以及可选的相邻原始事件摘要。",
+      "parameters": {
+        "properties.session_id.description": "目标会话 id。省略表示当前会话。",
+        "properties.seq.description": "目标事件的序号。",
+        "properties.before.description": "要摘要的前置原始事件数。省略表示不要。",
+        "properties.after.description": "要摘要的后继原始事件数。省略表示不要。"
+      }
+    }
+  }
+}

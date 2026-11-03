@@ -1,0 +1,51 @@
+{
+  "tools": {
+    "terminal_close": {
+      "description": "关闭一个持久终端，并等它捕获到的自有进程树退出。",
+      "parameters": {
+        "properties.sessionId.description": "终端会话 id。"
+      }
+    },
+    "terminal_list": {
+      "description": "列出当前 agent 拥有的持久终端会话。"
+    },
+    "terminal_open": {
+      "description": "按一个已注册的后端类型创建一个持久的、按 owner 隔离的终端会话。需要跨工具调用存活的 shell 或 REPL 状态就用它。",
+      "parameters": {
+        "properties.type.description": "已注册的终端后端类型，通常是 \"shell\"。",
+        "properties.name.description": "可选的、owner 本地的显示名，例如 \"main\" 或 \"gdb\"。",
+        "properties.cwd.description": "初始工作目录；不是绝对路径时按 Session 当前目录解析。"
+      }
+    },
+    "terminal_read": {
+      "description": "从一个持久终端读一页有界的留存输出，不发送任何输入。",
+      "parameters": {
+        "properties.sessionId.description": "终端会话 id。",
+        "properties.offset.description": "相对最新一行的偏移（默认 0）。",
+        "properties.count.description": "请求的行数（默认 500；受后端上限约束）。"
+      }
+    },
+    "terminal_send": {
+      "description": "把文本发送到一个持久终端。默认会提交 Enter，并且这次调用会等一个提示符、stdin 等待、输出静默、超时或会话退出。后台模式会返回一个 job id，供 job_output/job_kill 使用。",
+      "parameters": {
+        "properties.sessionId.description": "terminal_open 或 terminal_list 返回的终端会话 id。",
+        "properties.text.description": "要写入该终端的 UTF-8 文本。",
+        "properties.submit.description": "写入文本之后提交 Enter（默认 true）。要发控制字符或不完整的 REPL 输入时设为 false。",
+        "properties.run_in_background.description": "立即返回一个 job id；用 job_output 收集，或用 job_kill 停止。"
+      }
+    },
+    "terminal_signal": {
+      "description": "给一个持久终端当前的前台进程组发送一个被允许的信号。",
+      "parameters": {
+        "properties.sessionId.description": "终端会话 id。",
+        "properties.signal.description": "要投递的信号。针对 shell 的 SIGKILL 会被拒绝；改用 terminal_close。"
+      }
+    },
+    "working_directory": {
+      "description": "读取当前工作目录，或者用 cd 改变它。相对路径按当前目录解析。已经存在的 shell 和正在运行的进程保持它们自己的目录。",
+      "parameters": {
+        "properties.cd.description": "要进入的已存在目录。省略则读取当前目录。"
+      }
+    }
+  }
+}

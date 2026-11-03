@@ -1,0 +1,92 @@
+{
+  "sections": {
+    "dsh-ops:discovery-tools": {
+      "en": "# Repository file tools\n\n| Task | Tool |\n| --- | --- |\n| Find advanced capabilities for the next model step | ops_discover_tools |\n\n- ops_* arguments are strict: pass only declared fields.\n- Discover a capability when needed; selection makes it available on the next model step and performs no file action.",
+      "zh": "# 代码库文件工具\n\n| 任务 | 工具 |\n| --- | --- |\n| 找到下一步模型可用的进阶能力 | ops_discover_tools |\n\n- ops_* 的参数是严格的：只传声明过的字段。\n- 需要时再发现能力；选中它只是让它在下一步可用，不会执行任何文件动作。"
+    }
+  },
+  "tools": {
+    "ops_bash": {
+      "description": "用宿主沙箱、审批与后台任务，在一个全新的 shell 里执行一条 Bash 命令。相对 workdir 按当前会话工作区解析。输出是有界的，超出部分会给出溢写路径。宿主兼容的调用用 command；script_path 是 OPS 的扩展，用来跑一个已存在的脚本文件。删除或移动之前先核实解析后的绝对目标。绝不要靠换一个 shell 来绕过沙箱拒绝。",
+      "parameters": {
+        "properties.command.description": "短的 bash 命令或管道。用 script_path 时省略或留空。",
+        "properties.description.description": "必填：用主动语态清楚简洁地说明这条命令做什么，5-10 个词。",
+        "properties.script_path.description": "已存在的 Bash 脚本路径，无论扩展名是什么都由 Bash 执行。PowerShell 脚本请用宿主的 pwsh。用 command 时省略或留空。绝不要把 /dev/null 当作占位符。",
+        "properties.workdir.description": "工作目录，相对于会话工作区；省略时默认为该工作区。",
+        "properties.timeoutMs.description": "默认 120000 毫秒；上限 600000 毫秒。配宿主后台任务时，到期会把正在运行的命令交给 job_output/job_kill；否则就停止该命令。",
+        "properties.graceMs.description": "终止与强制结束之间的宽限期，单位毫秒。默认为 3000。",
+        "properties.includeDiagnostics.description": "在结构化输出里附上紧凑的耗时与执行器诊断信息；默认不附。",
+        "properties.run_in_background.description": "立即返回一个宿主 job id；用 job_output 收集，用 job_kill 停止。不受执行超时限制。",
+        "properties.sandbox_permissions.description": "在真实被拒之后，为这条完全相同的命令申请最窄的更宽模式，并附理由。批准只对本次调用有效。不要绕过拒绝。",
+        "properties.justification.description": "用一句话说明这条命令为什么需要更宽的权限，使用用户的语言。改变 sandbox_permissions 时必填。"
+      }
+    },
+    "ops_discover_tools": {
+      "description": "在本作用域里为下一步模型挑选被允许的 OPS 能力；不执行任何文件动作。",
+      "parameters": {
+        "properties.query.description": "能力名或 select:ops_name；1-512 个字符。",
+        "properties.max_results.description": "1-5；默认 3，并受配置上限约束。"
+      }
+    },
+    "ops_glob": {
+      "description": "在相对当前会话 cwd 的 path 之下查找普通文件。pattern 是一个 glob 数组，按相对 path 的路径匹配：[\"**/*.md\",\"!vendor/**\"]；\"*.md\" 只匹配顶层，\"!\" 表示排除，至少要有一个正向条目。符号链接、重解析点、隐藏文件以及依赖/构建目录都会被排除。limit 默认 100；分页用从 0 开始的 offset/nextOffset。要检查 scanComplete 与 pageComplete；matchedTotal 只在扫描完整后才存在。续页时保持选项不变，优先用 continuation；SEARCH_STALE 表示要重新开始。不完整的扫描需要更窄的查询。失败会以 {status:\"error\"|\"rejected\", error.code} 返回，不会抛出。",
+      "parameters": {
+        "properties.path.description": "搜索根；相对会话 cwd，默认 \".\"。",
+        "properties.pattern.description": "glob 数组，例如 [\"**/*.md\",\"!vendor/**\"]；至少要有一个正向条目。",
+        "properties.outputMode.description": "路径（默认），或带字节大小与修改时间的路径。",
+        "properties.sort.description": "按路径排序（默认），或最近修改的在前。",
+        "properties.offset.description": "非负整数（从 0 开始）。",
+        "properties.limit.description": "1 到 10000（含端点）。默认 100。",
+        "properties.continuation.description": "来自一次完整扫描的不透明游标。保持查询选项不变；省略 offset 或改用 nextOffset。SEARCH_STALE 表示需要重新查询。"
+      }
+    },
+    "ops_grep": {
+      "description": "在相对当前会话 cwd 的 path 之下搜索 UTF-8 文件。pattern 是一个 Rust 正则字符串；用 glob（一个相对 glob 数组，\"!\" 表示排除）过滤文件。没有 include 字段。summary 给聚合的文件/命中总数，count 给每个文件的命中数，files_with_matches 给路径，content 给文本（默认）；limit 默认 100 条。可以带行上下文。分页用从 0 开始的 offset/nextOffset，续页时保持选项不变，优先用 continuation。每一页都会重新扫描；SEARCH_STALE 表示要重新开始。要检查 scanComplete 与 pageComplete；matchedTotal 只在扫描完整后才存在，否则 matchedObserved 只是一个下界。skipReasons 解释扫描缺口。扫描不完整时把查询收窄，不要盲目翻页。失败会以 {status:\"error\"|\"rejected\", error.code} 返回，不会抛出。",
+      "parameters": {
+        "properties.path.description": "搜索根；相对会话 cwd，默认 \".\"。",
+        "properties.pattern.description": "一个 Rust 正则字符串，例如 \"TODO|FIXME\"。",
+        "properties.glob.description": "相对 glob 数组，例如 [\"**/*.ts\",\"!vendor/**\"]；省略表示所有符合条件的文件。",
+        "properties.outputMode.description": "命中文本（默认）、文件路径、每个文件的命中数，或聚合总数。",
+        "properties.caseInsensitive.description": "忽略大小写；默认 false。",
+        "properties.lineNumbers.description": "带上从 1 开始的行号；默认 true。",
+        "properties.beforeContext.description": "0 到 32（含端点）。每处命中之前的行数；默认 0。",
+        "properties.afterContext.description": "0 到 32（含端点）。每处命中之后的行数；默认 0。",
+        "properties.multiline.description": "搜索整个文件的文本，而不是逐行搜索；默认 false。",
+        "properties.offset.description": "非负整数（从 0 开始）。",
+        "properties.limit.description": "1 到 10000（含端点）。默认 100。",
+        "properties.exactTotal.description": "默认 true。设为 false 时，到行数上限就停，只给下界且没有稳定游标；summary 与 continuation 仍会完整扫描。",
+        "properties.continuation.description": "来自一次完整扫描的不透明游标。保持查询选项不变；省略 offset 或改用 nextOffset。SEARCH_STALE 表示需要重新查询。"
+      }
+    },
+    "ops_inspect_local_file": {
+      "description": "从相对 DSH 会话 cwd 的 path 读取有界的 UTF-8 文本行，或读取十六进制视图。目录会被拒绝；请改用 ops_glob 或 ops_grep。失败会以 {status:\"error\"|\"rejected\", error.code} 返回，不会抛出。",
+      "parameters": {
+        "properties.path.description": "文件路径；相对于会话 cwd。",
+        "properties.offset.description": "从 1 开始的行号，或从 1 开始的 16 字节十六进制行；默认 1。为兼容旧用法，0 也表示读第一个单元。",
+        "properties.limit.description": "1 到 10000（含端点）。默认 200。",
+        "properties.encoding.description": "文本编码；只支持 utf-8。",
+        "properties.view.description": "文本行（默认），或 16 字节一行的十六进制视图。"
+      }
+    },
+    "ops_read_files": {
+      "description": "读取相对会话 cwd 的若干 UTF-8 区间。逐个检查每个文件的 complete/error；nextOffset 用来续读行，nextIndex 用来接着处理还没读的文件。二进制内容需要二进制读取器。失败会返回 status:error|rejected 与 error.code；不会抛出。",
+      "parameters": {
+        "properties.files.description": "1 到 32 个文件区间。",
+        "properties.files.items.properties.offset.description": "行号，>=1；默认 1。",
+        "properties.files.items.properties.limit.description": "1 到 10000（含端点）。默认 200。"
+      }
+    },
+    "ops_result": {
+      "description": "对一个归自己所有的 ref:// 快照做分页或释放。不做 put、不生成审计 id、也不写业务数据。root 默认是当前会话 cwd；cwd 变化之后要传回返回的 root。分页默认 offset=0、limit=64、maxBytes=16384。只有整页行都显示出来了才去跟随 nextOffset；page complete 从不证明源操作已经完成。equals 在字段投影之前过滤；offset 计的是过滤后的已存行（含分块）。带标签的 item-json-chunk 行是 JSON 文本片段：把同一个索引的文本按 byteOffset 顺序拼起来，并且只在 complete=true 之后才解析。引用会随会话或 ttlMs 过期，并且需要当前权限与生产者可见性。release 只清掉缓存的观测。失败以错误值返回。",
+      "parameters": {
+        "properties.root.description": "绑定到原始引用的绝对根路径。原生模式下默认当前会话 cwd；PTC 模式下默认工作区根。",
+        "properties.id.description": "原样使用返回的 reference.refId。",
+        "properties.offset.description": "过滤后行的偏移，非负；默认 0。",
+        "properties.limit.description": "1 到 512 行；默认 64。",
+        "properties.maxBytes.description": "序列化后的字节数，512 到 65536；默认 16384。原生显示不完整时把它调小。",
+        "properties.fields.description": "至多 32 个顶层字段名，每个至多 128 字节。",
+        "properties.equals.description": "至多 16 个顶层精确值过滤，在投影与分页之前应用。"
+      }
+    }
+  }
+}

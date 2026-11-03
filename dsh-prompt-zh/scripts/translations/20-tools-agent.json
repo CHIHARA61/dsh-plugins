@@ -1,9 +1,23 @@
 {
   "tools": {
     "list_agents": {
-      "description": "列出 Lead 与每一个持久 teammate，给出可寻址的 target 与当前可用状态。inactive 表示没有轮次在执行，而不是任务结果。provisioning 与 failed 描述的是成员创建状态。",
+      "description": {
+        "variants": [
+          {
+            "exact": "List the Lead and every durable teammate with an addressable target and current availability. inactive means no turn is executing, not a task result. provisioning and failed describe member creation.",
+            "zh": "列出 Lead 与每一个持久 teammate，给出可寻址的 target 与当前可用状态。inactive 表示没有轮次在执行，而不是任务结果。provisioning 与 failed 描述的是成员创建状态。"
+          },
+          {
+            "exact": "List subagents you started, with their ids, labels, and status. running means it is working; inactive means it is not currently working. You will be notified when a subagent finishes; there is no need to keep checking its status. Use send_message to continue the conversation.",
+            "zh": "列出你启动的子代理，含它们的 id、标签与状态。running 表示正在干活；inactive 表示当前没在干活。子代理结束时运行时会通知你，不必反复查它的状态。用 send_message 继续对话。"
+          }
+        ]
+      },
       "parameters": {
-        "properties.scope.description": "children（默认）只列直接子级；descendants 遍历你下面的整棵树。"
+        "properties.scope.description": {
+          "en": "children (default) lists direct children, which accept send_message in any status. descendants lists the whole tree below you with each entry's parent session id and depth; entries deeper than 1 accept only interrupt_agent.",
+          "zh": "children（默认）列直接子级，它们在任何状态下都接受 send_message。descendants 列出你下面的整棵树，并给出每一条的父会话 id 与深度；深度大于 1 的条目只接受 interrupt_agent。"
+        }
       }
     },
     "plugin_manager": {
@@ -43,11 +57,39 @@
       }
     },
     "send_message": {
-      "description": "给另一个 Team 成员发一条持久消息。目标正在运行时，会在它最近的步骤边界处收到；目标处于 inactive 时，会开始或恢复一个轮次。",
+      "description": {
+        "variants": [
+          {
+            "exact": "Send one message to another Team member. A running target receives it at the nearest step boundary; an inactive target starts or resumes a turn.",
+            "zh": "给另一个 Team 成员发一条消息。目标正在运行时，会在它最近的步骤边界处收到；目标处于 inactive 时，会开始或恢复一个轮次。"
+          },
+          {
+            "exact": "Send a message to an agent. A working agent receives it at its next step; an idle agent starts a new turn with it. Returns delivery confirmation, not the agent's answer.",
+            "zh": "给某个 agent 发一条消息。正在工作的 agent 会在它的下一个步骤收到；空闲的 agent 会用它开一个新轮次。返回的是投递确认，不是该 agent 的回答。"
+          }
+        ]
+      },
       "parameters": {
-        "properties.agent_id.description": "你的直接可继续子级的 agent id；当你自己是常驻的可继续子级时，也可以是你的直接父级。",
-        "properties.message.description": "给该目标的自成一体的消息。",
-        "properties.target.description": "spawn_teammate 或 list_agents 返回的成员 target，也包括 lead。"
+        "properties.agent_id.description": {
+          "en": "The agent id of your direct continuable child, or your direct parent when you are a resident continuable child.",
+          "zh": "你的直接可继续子级的 agent id；当你自己是常驻的可继续子级时，也可以是你的直接父级。"
+        },
+        "properties.message.description": {
+          "variants": [
+            {
+              "exact": "Self-contained message for the target.",
+              "zh": "给该目标的自成一体的消息。"
+            },
+            {
+              "exact": "The message to deliver to the agent.",
+              "zh": "要投递给该 agent 的消息。"
+            }
+          ]
+        },
+        "properties.target.description": {
+          "en": "Member target returned by spawn_teammate or list_agents, including lead.",
+          "zh": "spawn_teammate 或 list_agents 返回的成员 target，也包括 lead。"
+        }
       }
     },
     "skill": {
@@ -57,19 +99,43 @@
       }
     },
     "subagent": {
-      "description": "把一个自成一体的任务委派给子代理（一个在自己的上下文里工作的独立 agent），以便把需要专注、互不依赖的工作——调研、一个范围明确的实现、一次分析——卸出去，不让它占用本对话的上下文。子代理返回的是它的结果，不是它的中间步骤。给它一份完整、独立的提示词：它看不到本对话。本工具默认在后台运行，立即返回一个持久 subagent id，并让子对话保留下来供后续轮次使用。该运行结算时，运行时会向父级发一条通知，包含其结果与最终的 assistant 消息（如果有）；`send_message` 会在子级运行时给它的最近步骤转向，在它 inactive 时开始或恢复一个轮次。只有下一步动作依赖收到结果时，才设 `run_in_background: false`。",
+      "description": {
+        "en": "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The child reports results with `send_message`; use `send_message` to steer it while running or continue its conversation after it finishes.",
+        "zh": "把一个自成一体的任务委派给子代理（一个在自己的上下文里工作的独立 agent），以便把需要专注、互不依赖的工作——调研、一个范围明确的实现、一次分析——卸出去，不让它占用本对话的上下文。子代理返回的是它的结果，不是它的中间步骤。本工具会启动一个被独立管理的子代理并立即返回它的 id。它结束时运行时会通知你。子级用 `send_message` 回报结果；要在它运行时转向、或在它结束后继续对话，都用 `send_message`。"
+      },
       "parameters": {
-        "properties.description.description": "对被委派任务的简短描述（3-5 个词），用于展示。",
-        "properties.prompt.description": "给子代理的完整、自成一体的任务。它不共享本对话的上下文，所以把它需要的一切都写进去。",
-        "properties.run_in_background.description": "是否在后台运行并立即返回一个持久 subagent id。默认为 true。当下一步动作依赖结果时设为 false 以等待结果。"
+        "properties.cwd.description": {
+          "en": "Initial child working directory. Relative paths use your current directory; omitted inherits it. Later directory changes in either agent are independent.",
+          "zh": "子级初始的工作目录。相对路径按你当前目录解析；省略则继承你的。之后任一 agent 改动目录互不影响。"
+        },
+        "properties.description.description": {
+          "en": "A short (3-5 word) description of the delegated task, for display.",
+          "zh": "对被委派任务的简短描述（3-5 个词），用于展示。"
+        },
+        "properties.prompt.description": {
+          "en": "The complete, self-contained task for the subagent. It does not share this conversation's context, so include everything it needs.",
+          "zh": "给子代理的完整、自成一体的任务。它不共享本对话的上下文，所以把它需要的一切都写进去。"
+        }
       }
     },
     "subagent_fork": {
-      "description": "把一个任务委派给一个继承本对话的子代理：子 agent 以目前为止全部已完成的轮次作为初始上下文（它看不到当前正在进行的这一轮）。当子任务建立在本对话的上下文之上时用它——一次后续分析、一次评审、一次续写——同时不让工作本身占用本对话的上下文。你收到的是它的结果，不是它的中间步骤。本工具默认在后台运行，并返回一个可以用 `send_message` 继续的 subagent id；该运行结算时你会收到通知。",
+      "description": {
+        "en": "Delegate a task to a subagent that inherits this conversation: a child agent seeded with all completed turns so far (it does not see the current in-flight turn). Use this when the subtask builds on this conversation's context — a follow-up analysis, a review, a continuation — without consuming this conversation's context for the work itself. You receive its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The child reports results with `send_message`; use `send_message` to steer it while running or continue its conversation after it finishes.",
+        "zh": "把任务委派给一个继承本对话的子代理：子 agent 以本对话到目前为止的所有已完成轮次作为初始上下文（它看不到当前还没结束的这一轮）。当子任务建立在本对话的上下文之上时——一次后续分析、一次评审、一次继续——用它，而不必让这项工作占用本对话的上下文。你收到的是它的结果，不是它的中间步骤。本工具会启动一个被独立管理的子代理并立即返回它的 id。它结束时运行时会通知你。子级用 `send_message` 回报结果；要在它运行时转向、或在它结束后继续对话，都用 `send_message`。"
+      },
       "parameters": {
-        "properties.description.description": "对被委派任务的简短描述（3-5 个词），用于展示。",
-        "properties.prompt.description": "给子代理的任务。它已经能看到本对话已完成的轮次，所以可以放心在此基础上展开，只说明新增的内容。",
-        "properties.run_in_background.description": "默认为 true。只有下一步动作依赖收到结果时才设为 false。"
+        "properties.cwd.description": {
+          "en": "Initial child working directory. Relative paths use your current directory; omitted inherits it. Later directory changes in either agent are independent.",
+          "zh": "子级初始的工作目录。相对路径按你当前目录解析；省略则继承你的。之后任一 agent 改动目录互不影响。"
+        },
+        "properties.description.description": {
+          "en": "A short (3-5 word) description of the delegated task, for display.",
+          "zh": "对被委派任务的简短描述（3-5 个词），用于展示。"
+        },
+        "properties.prompt.description": {
+          "en": "The task for the subagent. It already sees this conversation's completed turns, so build on them freely and state only what is new.",
+          "zh": "给子代理的任务。它已经能看到本对话已完成的轮次，所以可以放心在此基础上展开，只说明新增的内容。"
+        }
       }
     },
     "todo_write": {
@@ -101,9 +167,15 @@
       }
     },
     "wait_agent": {
-      "description": "等待本次调用开始之后的下一个 teammate 状态、邮箱或共享任务变化。它绝不会唤醒 inactive 成员，并且在没有其他成员处于 running 或 provisioning 时立即返回 noProgress。醒来或超时之后重新列出，而不是轮询。",
+      "description": {
+        "en": "Wait for the next teammate status, message, or shared-task change after this call starts. This never wakes inactive members and returns noProgress immediately when no other member is running or provisioning. Re-list after wakeup or timeout instead of polling.",
+        "zh": "等待本次调用开始之后的下一个 teammate 状态、消息或共享任务变化。它绝不会唤醒 inactive 成员，并且在没有其他成员处于 running 或 provisioning 时立即返回 noProgress。醒来或超时之后重新列出，而不是轮询。"
+      },
       "parameters": {
-        "properties.timeout_ms.description": "等待时长，单位毫秒，从 10000 到 3600000。默认为 30000。"
+        "properties.timeout_ms.description": {
+          "en": "Wait duration in milliseconds, from 10000 through 3600000. Defaults to 30000.",
+          "zh": "等待时长，单位毫秒，从 10000 到 3600000。默认为 30000。"
+        }
       }
     },
     "team_task_create": {

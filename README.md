@@ -181,6 +181,16 @@ profile 目录里的 `package.json` 会被改写；如果插件同时从 `dsh.pr
   就是 `build-dict --report` 吃的形状——0.2.0 这轮刷新就是这么做的：一次覆盖
   22 个段落、32 个工具、98 条参数说明的基线。**已经是中文的条目不要写进报告**
   （`en` 会被写成中文）；报告没覆盖到的条目会自动继承旧基线。
+- **0.2.1-rc.5 这轮刷新的做法**（比翻会话日志省事，也更贴近真实装配）：新建一个探针
+  profile（`$DSH_HOME/profiles/<name>`，bundles 抄 `dsh-base` + `dsh-headless` +
+  想覆盖的 `dsh-experimental-*`，再把插件复制一份、把 `DEFAULTS.reportPath` 改成固定路径
+  后 junction 进它的 `node_modules`），用桌面安装自带的运行时跑一次
+  `ELECTRON_RUN_AS_NODE=1 "DeepSeek Harness.exe" --expose-internals <app.asar>/dsh/node_modules/@deepseek-ai/dsh-desktop-host/lib/cli.js
+  --profile <name> "hi"`：装配发生在前、模型调用在后，缺 API key 也没关系，报告已经落盘。
+  真实桌面 profile 的那一份只能临时抓：往它的 `cordis.patch.yml` 追加一行
+  `- id: prompt-zh / name: dsh-prompt-zh / config: { reportPath: … }`，下一轮装配就会写出来，
+  抓完立刻还原。两次报告合并（后者覆盖前者）再喂 `build-dict`，就能同时覆盖
+  「Windows 上没装的 bash」「只有桌面 profile 才有的 ops_*」这两类条目。
 - **`en` 与原文不符的后果是"保留英文"而不是"乱译"**：无条件条目的 `en` 一旦与宿主实际
   发出的原文不同，`resolveEntry` 判为 `drift`，译文**不会被应用**。所以给条件性文本
   （如 `bash`/`pwsh` 的描述）写基线时，要基线与该平台默认装配产出的原文一致。
