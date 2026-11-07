@@ -190,21 +190,28 @@
             config:
               # 控制工具：send_message 继续对话，interrupt_agent 叫停跑偏的一路，
               # list_agents 按 id 把它们列出来。continuable 子级需要这套控制才完整。
+              #
+              # 0.2.2-rc.1 起这三件工具都由这一个插件提供：单独的
+              # `@deepseek-ai/dsh-tool-subagent-control/list-agents` 子路径已从包的
+              # exports 移除，再写那一行会让整个 preset 载入失败
+              # （roster 报 "tool-subagent-list-agents …: never started"）。
               - id: tool-subagent-control
                 name: '@deepseek-ai/dsh-tool-subagent-control'
 
-              - id: tool-subagent-list-agents
-                name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
-
               # continuable：子代理的结果不是一次性结论，而是一个可以继续追问的
               # 对话者——这正是"多视角互搏"与"派活"的区别所在。
+              #
+              # 0.2.2-rc.1 的字段名：`modelSelection` / `modelDiscovery` 取代了旧的
+              # `modelSelectionSettings`，`backgroundMode` 已从 schema 删除（spawn 的
+              # 子代理本身就可继续对话）。旧字段会被 schema 静默丢弃，模型选择能力
+              # 会跟着悄悄失效，所以这里必须写新字段。
               - id: tool-subagent
                 name: '@deepseek-ai/dsh-tool-subagent'
                 config:
                   provider: spawn
                   toolName: subagent
-                  modelSelectionSettings: true
-                  backgroundMode: continuable
+                  modelSelection: true
+                  modelDiscovery: true
 
               # fork 省略模型选择，使 provider/model 与父级一致、继承的历史仍可用于
               # KV Cache 复用。父与子继承同一个消息工具，因此两边都能继续开口。
@@ -213,7 +220,6 @@
                 config:
                   provider: fork
                   toolName: subagent_fork
-                  backgroundMode: continuable
 
           # ── compaction ──────────────────────────────────────────────────────────────
 

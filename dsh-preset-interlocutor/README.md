@@ -150,9 +150,17 @@ Office：
 
 ## 版本
 
-声明 `dsh >= 0.1.7-rc.1`（preset 声明行机制从该版本起可用）。`read_doc` 用到
-`ctx.fs.resolve` / `stat` / `readBytes` 与 `ctx.tools.register` 的普通对象定义，
-在 DSH Desktop `0.2.0-rc.2` 上开发与验证；`readBytes` 这类 seam 在 `0.1.5-rc.3` 就已存在。
+声明 `dsh >= 0.2.2-rc.1`。1.1.1 起对齐 0.2.2-rc.1 的 delegation 写法：
+
+- `list_agents` 并入 `@deepseek-ai/dsh-tool-subagent-control`，包里不再有
+  `@deepseek-ai/dsh-tool-subagent-control/list-agents` 子路径。旧写法会让整个 preset
+  在 roster 里带 `broken`（GUI 表现为「载入失败」），因为那一行 `never started`。
+- `tool-subagent` 的 `modelSelectionSettings` 改名成 `modelSelection` +
+  `modelDiscovery`；`backgroundMode` 已从 schema 删除（spawn 出的子代理本身就可继续
+  对话）。旧字段会被 schema 静默丢弃——不会报错，只会让模型选择能力悄悄失效。
+
+`read_doc` 用到 `ctx.fs.resolve` / `stat` / `readBytes` 与 `ctx.tools.register` 的普通对象定义；
+`readBytes` 这类 seam 在 `0.1.5-rc.3` 就已存在，但本包只在 0.2.2-rc.1 上验证。
 
 ## 许可
 

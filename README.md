@@ -203,6 +203,10 @@ profile 目录里的 `package.json` 会被改写；如果插件同时从 `dsh.pr
   `_research/` 下，缺失时相应断言会跳过并打印获取方式，不会假通过。
   写文档抽取时的经验：**先跟 oracle 对齐再谈"手写解析"**——PDF 那套是与 pypdfium2
   逐页比相似度调出来的，Office 那套是与 python-docx / python-pptx / openpyxl 逐行比出来的。
-- **版本要求**：`dsh-prompt-zh` 声明 `dsh >= 0.1.7-rc.1`；「思辨模式」用的声明行机制
-  在 `0.1.7-rc.1` 已就位（该版本含 `dsh-agent-preset` / `dsh-agent-preset-registry` /
-  `dsh-client-ui-agent-preset`）。0.1.5 那条线用的是目录式 preset，装不上。
+- **版本要求**：`dsh-prompt-zh` 声明 `dsh >= 0.1.7-rc.1`；`dsh-preset-interlocutor` 自
+  1.1.1 起声明 `dsh >= 0.2.2-rc.1`。0.2.2 把 `list_agents` 并进了
+  `@deepseek-ai/dsh-tool-subagent-control`（不再有 `.../list-agents` 子路径），并把
+  `tool-subagent` 的 `modelSelectionSettings` 改成 `modelSelection` + `modelDiscovery`；
+  按旧写法装会在 roster 里变成 `broken`，即「思辨模式载入失败」。声明行机制本身在
+  `0.1.7-rc.1` 就已就位（该版本含 `dsh-agent-preset` / `dsh-agent-preset-registry` /
+  `dsh-client-ui-agent-preset`）；0.1.5 那条线用的是目录式 preset，装不上。
